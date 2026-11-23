@@ -482,7 +482,13 @@ private fun DrawerPanel(
                 }
                 Spacer(Modifier.width(11.dp))
                 Column {
-                    Text("云小抄", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = t.text)
+                    // v3.4.6：应用名称可改（主题设置 → 图标文字 → 应用名称）
+                    Text(
+                        com.yunx.app.overlay.data.OverlayPrefs(context).appName(),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = t.text
+                    )
                     Spacer(Modifier.height(2.dp))
                     Text(versionLabel, fontSize = 9.sp, color = t.textMuted)
                 }
@@ -687,42 +693,10 @@ private fun DrawerPanel(
 
             Spacer(Modifier.height(6.dp))
 
-            // v2.0.10：左下角在「关于 / 修改说明」上面加一条「使用说明」
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .clickable(onClick = onOpenUsage)
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Rounded.Description,
-                    contentDescription = null,
-                    modifier = Modifier.size(19.dp),
-                    tint = t.textSub
-                )
-                Spacer(Modifier.width(12.dp))
-                Text("使用说明", fontSize = 14.sp, color = t.textSub)
-            }
-
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .clickable(onClick = onOpenAbout)
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Rounded.Info,
-                    contentDescription = null,
-                    modifier = Modifier.size(19.dp),
-                    tint = t.textSub
-                )
-                Spacer(Modifier.width(12.dp))
-                Text("关于 / 开源协议", fontSize = 14.sp, color = t.textSub)
-            }
+            // v3.4.6：原来这里单独占两行「使用说明」「关于 / 开源协议」，
+            // 和上面的「我的 → 协议与关于」完全重复，还会跟底部 Dock 叠在一起。
+            // 现在合并成抽屉里的一个入口（设置分组里的「关于与说明」），这里只留底部留白。
+            Spacer(Modifier.height(12.dp))
         }
     }
 }

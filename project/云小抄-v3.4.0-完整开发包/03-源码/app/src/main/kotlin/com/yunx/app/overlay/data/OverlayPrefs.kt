@@ -502,6 +502,22 @@ class OverlayPrefs(context: Context) {
             prefs.edit().putString(KEY_DOCK_ICONS, value).apply()
         }
 
+    /**
+     * v3.4.6：应用显示名称。留空 = 「云小抄」。
+     *
+     * 只改应用内看得到的名字（抽屉头部、关于页、桌面快捷方式）。
+     * Android 不允许已安装应用在运行时改自己的 android:label —— 想换桌面上的名字，
+     * 用「应用图标 → 导入图片做桌面图标」生成的快捷方式，那个名字可以随便写。
+     */
+    var appDisplayName: String
+        get() = prefs.getString(KEY_APP_NAME, "") ?: ""
+        set(value) {
+            prefs.edit().putString(KEY_APP_NAME, value.trim()).apply()
+        }
+
+    /** 应用名（空则默认「云小抄」） */
+    fun appName(): String = appDisplayName.takeIf { it.isNotBlank() } ?: "云小抄"
+
     // ------------------------------------------------------------------
     // 攻略来源（v1.7.0）：网盘 / 本地文件夹
     // ------------------------------------------------------------------
@@ -976,6 +992,7 @@ class OverlayPrefs(context: Context) {
         private const val KEY_APP_ICON = "app_icon_key"
         private const val KEY_CUSTOM_TEXTS = "theme_custom_texts"
         private const val KEY_DOCK_ICONS = "theme_dock_icons"
+        private const val KEY_APP_NAME = "app_display_name"
         private const val KEY_EXPANDED_W = "expanded_w"
         private const val KEY_EXPANDED_H = "expanded_h"
         private const val KEY_EXPANDED_ALPHA = "expanded_alpha"

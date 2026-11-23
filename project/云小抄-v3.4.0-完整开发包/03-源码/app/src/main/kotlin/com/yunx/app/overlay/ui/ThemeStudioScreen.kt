@@ -15,6 +15,8 @@ package com.yunx.app.overlay.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -43,6 +45,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Dashboard
@@ -825,6 +828,44 @@ private fun IconTextSection(
     var textEditing by remember { mutableStateOf(false) }
     var drafts by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
 
+    // v3.4.6：应用名称 / 手动导入桌面图标
+    val namePrefs = remember { OverlayPrefs(context) }
+    var appName by remember { mutableStateOf(namePrefs.appName()) }
+    var nameEditing by remember { mutableStateOf(false) }
+    var nameDraft by remember { mutableStateOf("") }
+    var pendingIcon by remember { mutableStateOf<Bitmap?>(null) }
+    var pinNameDraft by remember { mutableStateOf("") }
+
+    val pickLauncherIcon = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        runCatching {
+            val raw = context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it)
+            } ?: error("无法读取所选图片")
+            // 快捷方式图标最大也就 288dp，缩到 512 足够，省内存也省安装包外的空间
+            val maxEdge = maxOf(raw.width, raw.height)
+            val scaled = if (maxEdge > 512) {
+                val ratio = 512f / maxEdge
+                Bitmap.createScaledBitmap(
+                    raw,
+                    (raw.width * ratio).toInt().coerceAtLeast(1),
+                    (raw.height * ratio).toInt().coerceAtLeast(1),
+                    true
+                )
+            } else {
+                raw
+            }
+            AppIcon.saveCustomIcon(context, scaled)
+            pendingIcon = scaled
+            pinNameDraft = namePrefs.appName()
+            iconPicking = false
+        }.onFailure {
+            Toast.makeText(context, "读取图片失败：${it.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     GlassSectionTitle("应用图标与文字")
     GlassCard {
         GlassRow(
@@ -836,6 +877,19 @@ private fun IconTextSection(
             onClick = { iconPicking = true }
         ) {
             Text("更换 ›", fontSize = 10.sp, color = GlassColors.Accent)
+        }
+        GlassDivider()
+        // v3.4.6：应用名。桌面图标的名字要靠快捷方式，不能直接改 android:label
+        GlassRow(
+            title = "应用名称",
+            subtitle = "当前：$appName · 改抽屉头部与关于页显示的名字",
+            icon = Icons.Rounded.Edit,
+            onClick = {
+                nameDraft = namePrefs.appDisplayName
+                nameEditing = true
+            }
+        ) {
+            Text("修改 ›", fontSize = 10.sp, color = GlassColors.Accent)
         }
         GlassDivider()
         GlassRow(
@@ -1007,10 +1061,140 @@ private fun IconTextSection(
                         lineHeight = 13.sp,
                         color = GlassColors.TextMuted
                     )
+                    Spacer(Modifier.height(10.dp))
+                    // v3.4.6：手动导入自己的图。Android 不允许运行时替换已安装应用的
+                    // launcher 图标资源，所以这里走「钉一个带自定义图标的快捷方式」。
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(GlassColors.Accent.copy(alpha = 0.14f))
+                            .border(
+                                1.dp,
+                                GlassColors.Accent.copy(alpha = 0.42f),
+                                RoundedCornerShape(10.dp)
+                            )
+                            .clickable {
+                                pickLauncherIcon.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            }
+                            .padding(horizontal = 11.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Rounded.Image,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = GlassColors.Accent
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                "导入图片做桌面图标",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = GlassColors.Text
+                            )
+                            Text(
+                                "用自己的图和名字钉一个桌面快捷方式",
+                                fontSize = 8.5.sp,
+                                color = GlassColors.TextMuted
+                            )
+                        }
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { iconPicking = false }) { Text("完成") }
+            }
+        )
+    }
+
+    // ---------------- 应用名称 ----------------
+    if (nameEditing) {
+        AlertDialog(
+            onDismissRequest = { nameEditing = false },
+            title = {
+                Text("应用名称", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = nameDraft,
+                        onValueChange = { if (it.length <= 12) nameDraft = it },
+                        singleLine = true,
+                        label = { Text("显示名称", fontSize = 10.sp) },
+                        placeholder = { Text("云小抄", fontSize = 12.sp) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "留空 = 云小抄。改的是抽屉头部、关于页这些应用内文字；" +
+                            "桌面图标下面的名字请用上面「导入图片做桌面图标」生成，那个名字也能随便写。",
+                        fontSize = 9.sp,
+                        lineHeight = 13.sp,
+                        color = GlassColors.TextMuted
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    namePrefs.appDisplayName = nameDraft
+                    appName = namePrefs.appName()
+                    nameEditing = false
+                    Toast.makeText(context, "应用名称已改", Toast.LENGTH_SHORT).show()
+                }) { Text("保存") }
+            },
+            dismissButton = {
+                TextButton(onClick = { nameEditing = false }) { Text("取消") }
+            }
+        )
+    }
+
+    // ---------------- 钉自定义桌面图标 ----------------
+    val pendingBitmap = pendingIcon
+    if (pendingBitmap != null) {
+        AlertDialog(
+            onDismissRequest = { pendingIcon = null },
+            title = {
+                Text("桌面图标名字", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = pinNameDraft,
+                        onValueChange = { if (it.length <= 12) pinNameDraft = it },
+                        singleLine = true,
+                        label = { Text("图标下的文字", fontSize = 10.sp) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "点「添加到桌面」后，系统桌面会弹确认框。这个图标是独立快捷方式，" +
+                            "可以随意拖动、改名；原来那个图标长按就能从桌面移除。",
+                        fontSize = 9.sp,
+                        lineHeight = 13.sp,
+                        color = GlassColors.TextMuted
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val ok = AppIcon.pinCustomShortcut(context, pinNameDraft, pendingBitmap)
+                    Toast.makeText(
+                        context,
+                        if (ok) "已请求添加到桌面，去桌面点「添加」"
+                        else "这个桌面不支持钉快捷方式",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    pendingIcon = null
+                }) { Text("添加到桌面") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingIcon = null }) { Text("取消") }
             }
         )
     }

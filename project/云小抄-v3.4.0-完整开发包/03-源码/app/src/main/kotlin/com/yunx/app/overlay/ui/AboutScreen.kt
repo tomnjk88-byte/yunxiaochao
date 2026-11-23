@@ -124,7 +124,7 @@ fun AboutScreen(
 
         Spacer(Modifier.height(18.dp))
         Text(
-            "云小抄 v$version",
+            "${com.yunx.app.overlay.data.OverlayPrefs(context).appName()} v$version",
             fontSize = 22.sp,
             color = GlassColors.Text,
             fontWeight = FontWeight.Bold

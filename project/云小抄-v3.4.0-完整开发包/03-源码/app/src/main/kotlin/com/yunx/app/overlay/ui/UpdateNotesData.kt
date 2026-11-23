@@ -26,6 +26,21 @@ data class UpdateNote(
 /** 全部版本的更新说明，最新在最前。 */
 val UPDATE_NOTES: List<UpdateNote> = listOf(
     UpdateNote(
+            version = "v3.4.6",
+            date = "2026-11-23",
+            added = listOf(
+                "应用图标支持导入自己的图片：主题设置 → 图标文字 → 应用图标 → 「导入图片做桌面图标」，" +
+                    "选图后写个名字就能钉到桌面（Android 不允许运行时替换已安装应用的图标资源，快捷方式是唯一正规做法）。",
+                "应用名称可改：同一页新增「应用名称」，抽屉头部与关于页会立刻跟着变。",
+            ),
+            improved = listOf(
+                "抽屉底部的「使用说明」「关于 / 开源协议」两行合并成一项：" +
+                    "「我的 → 关于与使用说明」，不再和底部 Dock 叠在一起。",
+                "Dock 模式下抽屉层彻底不参与开合，两套导航不可能同时出现。",
+            ),
+            fixed = emptyList(),
+        ),
+    UpdateNote(
             version = "v3.4.5",
             date = "2026-11-23",
             added = emptyList(),

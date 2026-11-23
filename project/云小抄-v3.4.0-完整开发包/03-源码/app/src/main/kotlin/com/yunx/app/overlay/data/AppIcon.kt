@@ -18,7 +18,14 @@ package com.yunx.app.overlay.data
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.content.pm.PackageManager
+import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
+import androidx.core.graphics.drawable.IconCompat
+import java.io.File
 
 object AppIcon {
 
@@ -81,4 +88,48 @@ object AppIcon {
         OverlayPrefs(context).appIconKey = key
         return true
     }
+
+    // ------------------------------------------------------------------
+    // v3.4.6：手动导入图标
+    // ------------------------------------------------------------------
+
+    /**
+     * 用用户自己的图片在桌面钉一个快捷方式。
+     *
+     * Android 不允许已安装应用在运行时替换自己的 launcher 图标资源
+     * （android:icon 编译进 APK，activity-alias 也只能指向已有资源），
+     * 所以「导入图片当图标」只能走快捷方式：图标是任意 Bitmap，名字也随便写。
+     * 返回 false 表示桌面不支持或请求失败。
+     */
+    fun pinCustomShortcut(context: Context, label: String, bitmap: Bitmap): Boolean {
+        val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            ?: return false
+        launch.action = Intent.ACTION_MAIN
+        launch.addCategory(Intent.CATEGORY_LAUNCHER)
+        val name = label.trim().ifBlank { "云小抄" }
+        val shortcut = ShortcutInfoCompat.Builder(
+            context,
+            "yunx-custom-" + System.currentTimeMillis()
+        )
+            .setShortLabel(name.take(10))
+            .setLongLabel(name)
+            .setIcon(IconCompat.createWithAdaptiveBitmap(bitmap))
+            .setIntent(launch)
+            .build()
+        return runCatching {
+            ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)
+        }.getOrDefault(false)
+    }
+
+    /** 导入的图标存私有目录：下次再钉快捷方式直接复用，不用用户重新选图 */
+    fun saveCustomIcon(context: Context, bitmap: Bitmap): String? = runCatching {
+        val file = File(context.filesDir, "custom_launcher_icon.png")
+        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        file.absolutePath
+    }.getOrNull()
+
+    fun loadCustomIcon(context: Context): Bitmap? = runCatching {
+        val file = File(context.filesDir, "custom_launcher_icon.png")
+        if (file.isFile) BitmapFactory.decodeFile(file.absolutePath) else null
+    }.getOrNull()
 }

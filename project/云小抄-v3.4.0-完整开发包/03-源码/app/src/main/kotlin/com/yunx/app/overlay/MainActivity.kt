@@ -544,7 +544,8 @@ private val DRAWER_ITEMS = listOf(
             DrawerChild("自动连招", "auto")
         )
     ),
-    DrawerItem("协议", Icons.Rounded.Info, "设置", target = 6),
+    // v3.4.6：「协议」「使用说明」「关于」三处入口合并成一个 ——
+    // 抽屉里只留「我的 → 关于与使用说明」，避免底部再挤两行、还跟 Dock 打架。
     // v3.3.0：主题商店。Dock 模式里它是第三格；抽屉模式从这里进
     DrawerItem("主题商店", Icons.Rounded.Style, "设置", target = 8),
     DrawerItem(
@@ -553,7 +554,7 @@ private val DRAWER_ITEMS = listOf(
         children = listOf(
             DrawerChild("账号与同步", "account"),
             DrawerChild("主题设置", "theme"),
-            DrawerChild("协议与关于", "about")
+            DrawerChild("关于与使用说明", "about")
         )
     )
 )
@@ -1398,7 +1399,9 @@ private fun HomeScreen(
     // 所以它必须是这棵树的最后一个子项
     Box(Modifier.fillMaxSize()) {
     GuideDrawerHost(
-        open = drawerOpen,
+        // v3.4.6：双保险 —— Dock 模式下抽屉层根本不参与开合，
+        // 哪怕状态被别处置了 true，也不会两套导航同时出现在屏幕上。
+        open = drawerOpen && !dockNav,
         openSide = drawerSide,
         onOpenChange = { drawerOpen = it },
         items = DRAWER_ITEMS,
@@ -1496,7 +1499,7 @@ private fun HomeScreen(
         3 -> HomeTab.RESOLVE.subtitle
         5 -> "悬浮窗 · 通知 · 无障碍 · Root / Shizuku"
         6 -> HomeTab.PROTOCOL.subtitle
-        7 -> "账号 · 主题设置 · 协议与关于"
+        7 -> "账号 · 主题设置 · 关于与使用说明"
         8 -> HomeTab.STORE.subtitle
         else -> null
     }

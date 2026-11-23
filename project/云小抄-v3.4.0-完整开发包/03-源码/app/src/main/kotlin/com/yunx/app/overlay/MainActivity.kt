@@ -642,6 +642,10 @@ private fun HomeScreen(
     }
     // v1.9.12：侧滑抽屉（替代底部那排挤在一起的 Tab）
     var drawerOpen by remember { mutableStateOf(false) }
+    // v3.4.5：切到 Dock 模式时把抽屉收起来 —— 两个导航方式不共存
+    LaunchedEffect(dockNav) {
+        if (dockNav) drawerOpen = false
+    }
     // v1.9.18：这次从左还是从右弹出（跟着滑动方向走）
     var drawerSide by remember { mutableStateOf(DrawerSide.LEFT) }
     val versionLabel = remember {
@@ -1522,6 +1526,7 @@ private fun HomeScreen(
                 crosshairOn = crosshairOn,
                 overlayGranted = overlayGranted,
                 onOpenDrawer = openMenu,
+                showDrawerButton = !dockNav,
                 onOpenStyle = { showStyle = true },
                 dark = uiDark,
                 onToggleTheme = toggleTheme,
@@ -1535,8 +1540,9 @@ private fun HomeScreen(
         Box(
             Modifier
                 .weight(1f)
-                .pointerInput(drawerOpen) {
-                    if (drawerOpen) return@pointerInput
+                .pointerInput(drawerOpen, dockNav) {
+                    // v3.4.5：Dock 模式没有抽屉可开，横滑手势一并停用
+                    if (drawerOpen || dockNav) return@pointerInput
                     val threshold = 56.dp.toPx()
                     awaitEachGesture {
                         val down = awaitFirstDown(
@@ -1907,6 +1913,8 @@ private fun GlassHeader(
     crosshairOn: Boolean,
     overlayGranted: Boolean,
     onOpenDrawer: () -> Unit,
+    /** v3.4.5：Dock 模式下不再给抽屉入口 —— 两种导航方式互斥，选一种就只用一种 */
+    showDrawerButton: Boolean = true,
     onOpenStyle: () -> Unit,
     /** v3.1.0：当前是不是深色 —— 决定那颗按钮画太阳还是月亮 */
     dark: Boolean,
@@ -1923,22 +1931,25 @@ private fun GlassHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // v1.9.12：左侧菜单按钮 —— 抽屉的另一个入口（主入口是靠左边缘右滑）
-        Box(
-            Modifier
-                .clip(RoundedCornerShape(13.dp))
-                .background(GlassColors.TextSub.copy(alpha = 0.10f))
-                .border(1.dp, GlassColors.Stroke, RoundedCornerShape(13.dp))
-                .clickable(onClick = onOpenDrawer)
-                .padding(horizontal = 10.dp, vertical = 10.dp)
-        ) {
-            Icon(
-                Icons.Rounded.Menu,
-                contentDescription = "打开页面列表",
-                modifier = Modifier.size(19.dp),
-                tint = GlassColors.Text
-            )
+        // v3.4.5：Dock 模式下整颗按钮不出现，两个导航体系彻底分开
+        if (showDrawerButton) {
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(GlassColors.TextSub.copy(alpha = 0.10f))
+                    .border(1.dp, GlassColors.Stroke, RoundedCornerShape(13.dp))
+                    .clickable(onClick = onOpenDrawer)
+                    .padding(horizontal = 10.dp, vertical = 10.dp)
+            ) {
+                Icon(
+                    Icons.Rounded.Menu,
+                    contentDescription = "打开页面列表",
+                    modifier = Modifier.size(19.dp),
+                    tint = GlassColors.Text
+                )
+            }
+            Spacer(Modifier.width(13.dp))
         }
-        Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

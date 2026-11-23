@@ -87,6 +87,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
+import coil3.request.ImageRequest
 import com.yunx.app.overlay.data.OverlayPrefs
 import com.yunx.app.overlay.data.RemoteCatalog
 import com.yunx.app.overlay.data.RemoteTheme
@@ -181,6 +184,11 @@ fun ThemeStorePage(
         result.onSuccess { remoteCatalog = it }
             .onFailure { remoteError = it.message ?: "连不上主题商店" }
         remoteLoading = false
+    }
+
+    // v3.4.5：封面图也要带 token，否则服务端 401，卡片只剩一片透明
+    val remoteToken = remember(remoteCatalog?.baseUrl) {
+        remoteCatalog?.baseUrl?.let { ThemeStoreRemote.cachedToken(context, it) }
     }
 
     // 在线列表的搜索过滤（标签筛选由上面的 tag 统一管）
@@ -404,6 +412,7 @@ fun ThemeStorePage(
                                     }
                                 ),
                                 downloading = downloadingId == theme.id,
+                                token = remoteToken,
                                 onClick = { installRemote(theme) }
                             )
                         }
@@ -849,9 +858,12 @@ private fun RemoteThemeCard(
     theme: RemoteTheme,
     coverUrl: String?,
     downloading: Boolean,
+    /** 商店的图片同样要带访问令牌，不然一律 401 */
+    token: String?,
     onClick: () -> Unit
 ) {
     val t = LocalUiTokens.current
+    val context = LocalContext.current
     val shape = RoundedCornerShape(18.dp)
     Box(
         Modifier
@@ -863,8 +875,23 @@ private fun RemoteThemeCard(
             .combinedClickableCompat(onClick)
     ) {
         if (coverUrl != null) {
+            // v3.4.5：封面对 401 很敏感，必须在 ImageRequest 上挂同一个令牌
+            val model = remember(coverUrl, token) {
+                ImageRequest.Builder(context)
+                    .data(coverUrl)
+                    .apply {
+                        if (!token.isNullOrBlank()) {
+                            httpHeaders(
+                                NetworkHeaders.Builder()
+                                    .set("X-Sukisu-Theme-Token", token)
+                                    .build()
+                            )
+                        }
+                    }
+                    .build()
+            }
             AsyncImage(
-                model = coverUrl,
+                model = model,
                 contentDescription = theme.name,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop

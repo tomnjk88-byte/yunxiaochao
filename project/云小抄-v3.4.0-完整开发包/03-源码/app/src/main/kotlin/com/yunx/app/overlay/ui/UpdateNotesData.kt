@@ -26,6 +26,21 @@ data class UpdateNote(
 /** 全部版本的更新说明，最新在最前。 */
 val UPDATE_NOTES: List<UpdateNote> = listOf(
     UpdateNote(
+            version = "v3.4.5",
+            date = "2026-11-23",
+            added = emptyList(),
+            improved = listOf(
+                "主题商店在线封面恢复显示：封面图同样需要访问令牌，之前没带 header，" +
+                    "服务端一律 401，卡片只剩一片透明。",
+                "两种导航方式彻底互斥：选 Dock 后顶栏菜单键消失、屏幕边缘横滑也不再弹抽屉；" +
+                    "切换时正在展开的抽屉会自动收起。",
+                "导航方式当前项加了一颗对勾 —— 背景图透过玻璃时，两项都像选中，容易看错。",
+            ),
+            fixed = listOf(
+                "抽屉展开时底部 Dock 还压在下面、挡住抽屉末端几项的问题。",
+            ),
+        ),
+    UpdateNote(
             version = "v3.4.4",
             date = "2026-11-23",
             added = listOf(

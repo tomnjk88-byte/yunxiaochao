@@ -1202,10 +1202,20 @@ private fun BottomBarSection(
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 style.label,
+                                modifier = Modifier.weight(1f),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = GlassColors.Text
                             )
+                            // v3.4.5：背景图一透，两种模式看着都像选中 —— 给当前项一颗对勾
+                            if (active) {
+                                Icon(
+                                    Icons.Rounded.Check,
+                                    contentDescription = "已选",
+                                    modifier = Modifier.size(14.dp),
+                                    tint = GlassColors.Accent
+                                )
+                            }
                         }
                         Spacer(Modifier.height(4.dp))
                         Text(
@@ -1219,9 +1229,13 @@ private fun BottomBarSection(
             }
             Spacer(Modifier.height(9.dp))
             Text(
-                "抽屉：一屏只有内容，页面列表从左边缘滑出来。\n" +
+                if (nav == NavStyle.DOCK) {
                     "Dock：底部常驻一条玻璃胶囊，小抄 / 连招 / 主题 / 我的 一下切，" +
-                    "主题商店也在里面。换完立刻生效，不用重进。",
+                        "主题商店也在里面。此模式下顶栏不再有菜单键，从屏幕边缘横滑也不会弹出抽屉。"
+                } else {
+                    "抽屉：一屏只有内容，页面列表从左边缘滑出来，顶栏菜单键也能开。" +
+                        "此模式不显示底部 Dock，两种导航不会同时出现。"
+                },
                 fontSize = 9.5.sp,
                 lineHeight = 14.sp,
                 color = GlassColors.TextMuted

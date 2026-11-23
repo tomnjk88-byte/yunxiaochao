@@ -193,6 +193,22 @@ object ThemeStoreRemote {
         return baseUrl.trimEnd('/') + "/" + path.trimStart('/')
     }
 
+    /**
+     * 取已缓存的访问令牌（纯本地读取，不联网）。
+     *
+     * v3.4.5：封面图同样受 401 保护 —— 不带 X-Sukisu-Theme-Token 直接拿
+     * previews 目录下的 webp 会返回 401，卡片就成了空白。目录既然拉下来了，
+     * 缓存里必然有一个还没过期的 token。
+     */
+    fun cachedToken(context: Context, baseUrl: String): String? {
+        val key = "k_" + Integer.toHexString(baseUrl.hashCode())
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val token = prefs.getString("${key}_token", null)
+        val exp = prefs.getLong("${key}_exp", 0)
+        val now = System.currentTimeMillis() / 1000
+        return token?.takeIf { it.isNotBlank() && exp > now + 60 }
+    }
+
     // ------------------------------------------------------------------
     // 下载
     // ------------------------------------------------------------------

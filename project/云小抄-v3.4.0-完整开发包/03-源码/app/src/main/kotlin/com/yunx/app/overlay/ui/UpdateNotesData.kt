@@ -26,6 +26,19 @@ data class UpdateNote(
 /** 全部版本的更新说明，最新在最前。 */
 val UPDATE_NOTES: List<UpdateNote> = listOf(
     UpdateNote(
+            version = "v3.4.4",
+            date = "2026-11-23",
+            added = listOf(
+                "关于页新增「主题格式与 SukiSU Nova」：写明 .sukisu 包格式、主题商店接口、" +
+                    "底栏图标命名约定的来源，并标注 SukiSU 的 GPL-3.0-or-later / GPL-2.0-only 授权。",
+                "关于页的「本应用源代码」改为指向本应用自己的发布仓库，满足 AGPL-3.0 §13。",
+            ),
+            improved = listOf(
+                "底栏「主题」图标由调色盘换成画笔 —— 调色盘的孔洞在 22dp 下像一颗多余的点。",
+            ),
+            fixed = emptyList(),
+        ),
+    UpdateNote(
             version = "v3.4.3",
             date = "2026-11-23",
             added = listOf(

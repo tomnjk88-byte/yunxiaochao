@@ -42,11 +42,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Brush
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Menu
-import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -95,7 +95,8 @@ private val DOCK_ENTRIES = listOf(
     // 这四个名字是它的固定枚举，不跟着我们改，所以照抄。
     DockEntry(0, "小抄", Icons.Rounded.Description, "home"),
     DockEntry(1, "连招", Icons.Rounded.Bolt, "superuser"),
-    DockEntry(8, "主题", Icons.Rounded.Palette, "module"),
+    // v3.4.4：调色盘图标的孔洞在 22dp 下看着像一颗多余的点，换成画笔
+    DockEntry(8, "主题", Icons.Rounded.Brush, "module"),
     DockEntry(7, "我的", Icons.Rounded.Person, "setting")
 )
 
@@ -331,7 +332,7 @@ fun DockHeader(
             )
             Spacer(Modifier.width(8.dp))
             DockRoundButton(
-                icon = Icons.Rounded.Palette,
+                icon = Icons.Rounded.Brush,
                 description = "切换界面风格",
                 onClick = onOpenStyle
             )

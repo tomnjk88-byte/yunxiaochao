@@ -49,13 +49,24 @@ import androidx.compose.ui.unit.sp
 /**
  * 修改后应用的源代码地址。
  *
- * ★ 发布前必须替换成你自己的仓库地址：AGPL-3.0 要求「通过网络与本应用交互的用户」
- *   能拿到对应版本的完整源码。只写上游 YunX 的地址是不够的（那不是你修改后的版本）。
+ * AGPL-3.0 要求「通过网络与本应用交互的用户」能拿到对应版本的完整源码，
+ * 所以这里指向本应用自己的发布仓库，而不是上游 YunX。
  */
-private const val SOURCE_CODE_URL = "https://github.com/CYQawa/YunX"
+private const val SOURCE_CODE_URL = "https://github.com/tomnjk88-byte/yunxiaochao"
 
 private const val UPSTREAM_URL = "https://github.com/CYQawa/YunX"
 private const val LICENSE_URL = "https://www.gnu.org/licenses/agpl-3.0.html"
+
+/**
+ * SukiSU Nova（原名 SukiSU-Ultra）。
+ *
+ * 我们复用了它的两样「约定」，不是代码：
+ *  ① .sukisu 主题包格式（zip + 加密的 theme.json）；
+ *  ② 主题商店接口与底栏图标命名（bottom_bar_icon_home / superuser / module / setting）。
+ * 它应用核心是 GPL-3.0-or-later，内核目录 GPL-2.0-only。
+ */
+private const val SUKISU_REPO_URL = "https://github.com/SukiSU-Ultra/SukiSU-Ultra"
+private const val SUKISU_SITE_URL = "https://sukisu.org"
 
 @Composable
 fun AboutScreen(
@@ -175,6 +186,26 @@ fun AboutScreen(
         }
 
         Spacer(Modifier.height(12.dp))
+        AboutSection("主题格式与 SukiSU Nova") {
+            Text(
+                "本应用的 .sukisu 主题包解析、在线主题商店接口（含 X-Sukisu-Theme-Token 请求头、" +
+                    "SHA-256 校验）以及底栏图标命名约定（bottom_bar_icon_home / superuser / " +
+                    "module / setting），均参照 SukiSU Nova（原名 SukiSU-Ultra）的公开格式实现。\n\n" +
+                    "我们只实现兼容的读取/写入，不包含、不修改也不分发 SukiSU 的源代码。\n" +
+                    "SukiSU 的授权：应用核心 GPL-3.0-or-later；kernel 目录 GPL-2.0-only。\n\n" +
+                    "主题包内的图片与配色版权归各主题作者所有。本应用只在本机解析、展示，" +
+                    "不上传、不再分发；在线下载的包与官方源保持一致，不做二次打包。",
+                fontSize = 11.sp,
+                lineHeight = 17.sp,
+                color = GlassColors.TextSub
+            )
+            Spacer(Modifier.height(8.dp))
+            LinkRow("SukiSU 项目源代码", SUKISU_REPO_URL, ::open)
+            Spacer(Modifier.height(6.dp))
+            LinkRow("SukiSU 官网 · 主题格式文档", SUKISU_SITE_URL, ::open)
+        }
+
+        Spacer(Modifier.height(12.dp))
         AboutSection("源代码与协议") {
             Text(
                 "修改声明（AGPL-3.0 §5）：本应用系「云析 YunX」的二次开发版本，" +
@@ -190,7 +221,9 @@ fun AboutScreen(
                 color = GlassColors.TextSub
             )
             Spacer(Modifier.height(8.dp))
-            LinkRow("上游项目源代码（云析）", SOURCE_CODE_URL, ::open)
+            LinkRow("本应用源代码（含全部修改）", SOURCE_CODE_URL, ::open)
+            Spacer(Modifier.height(6.dp))
+            LinkRow("上游项目源代码（云析）", UPSTREAM_URL, ::open)
             Spacer(Modifier.height(6.dp))
             LinkRow("阅读 AGPL-3.0 全文", LICENSE_URL, ::open)
         }

@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -148,7 +149,7 @@ internal fun FrostedSurface(
     val blurScale = tuning.blurScale
     // v3.4.1: Palette 提取到的主色调 —— 如果有，就在卡片填充色上叠一层弱染色，
     // 让卡片微微染成背景图的主色调（alpha 很低，主要是和背景融合，不是覆盖）
-    val paletteColors = DynamicPalette.colors
+    val paletteColors by DynamicPalette.colors.collectAsState()
     val paletteTint = paletteColors.vibrant?.let { lift(it, tokens.dark) }
         ?: paletteColors.muted?.let { lift(it, tokens.dark) }
     val tintStrength = if (paletteTint != null) 0.12f else 0f

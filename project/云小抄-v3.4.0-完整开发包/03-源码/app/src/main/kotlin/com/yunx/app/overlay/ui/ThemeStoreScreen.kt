@@ -283,7 +283,7 @@ fun ThemeStorePage(
                         // 否则磁盘上的包删了，但内存里卡面图/底栏图标/包ID残留，
                         // 冷启动时 ThemePacks.byId(prefs.themePackId) 找不到这个包，
                         // ThemeSkin 保持最后一次 decode 的状态 —— 就是那套被删掉的图
-                        if (applied) {
+                        if (pack.id == appliedId) {
                             ThemeSkin.clear()
                             OverlayPrefs(context).themePackId = ""
                         }

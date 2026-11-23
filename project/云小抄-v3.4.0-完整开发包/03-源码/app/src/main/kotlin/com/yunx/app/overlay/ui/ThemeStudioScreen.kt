@@ -1643,7 +1643,7 @@ private fun ThemePackageSection(
                 // v3.4.1 FIX: 恢复默认必须同步清掉 ThemeSkin 和主题包状态
                 // 否则卡面图会残留到默认主题上（从带图包→恢复默认=纯色主题后仍见旧图）
                 ThemeSkin.clear()
-                prefs.themePackId = ""
+                OverlayPrefs(context).themePackId = ""
                 GuideStyleStore.setTuning(context, ThemeTuning())
                 Toast.makeText(context, "已恢复默认主题", Toast.LENGTH_SHORT).show()
             }

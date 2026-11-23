@@ -331,6 +331,11 @@ data class ThemeTuning(
     /** 背景上下边缘渐隐（截图里的「渐进式背景模糊」） */
     val progressiveScrim: Boolean = false,
     /**
+     * v3.4.2：自定义界面标题。"" = 用页面自带的标题 / 默认「云小抄」。
+     * 对齐 SukiSU Nova「界面文本自定义」里的「标题抬头」。
+     */
+    val customTitle: String = "",
+    /**
      * 自定义背景："" = 跟风格走的程序壁纸；"system" = 系统桌面壁纸；
      * 其他 = 私有目录里的图片绝对路径
      */

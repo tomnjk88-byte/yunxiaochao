@@ -1312,6 +1312,8 @@ private fun HomeScreen(
     // 换成「层叠 / 逐张」后滚动交给页内的 StaggerColumn（SlideDeck），
     // 这一层必须让开，否则两个滚动容器互相抢手势，滑一下就卡住。
     val slideMode by MotionPrefs.slide.collectAsState()
+    // v3.4.2：顶栏标题可以被「图标文字 → 界面标题文字」覆盖
+    val styleTuning by GuideStyleStore.tuning.collectAsState()
 
     // v3.0.9：卡组到底生不生效，按「这一页改造成卡组了没有」算，而不是只看设置。
     //
@@ -1502,7 +1504,7 @@ private fun HomeScreen(
         if (dockNav) {
             // v3.3.0：商店式导航的顶栏 —— 参考界面那种「一行圆钮 + 一个大标题」
             DockHeader(
-                title = headerTitle ?: "云小抄",
+                title = styleTuning.customTitle.ifBlank { headerTitle ?: "云小抄" },
                 subtitle = headerSubtitle,
                 dark = uiDark,
                 onOpenMenu = openMenu,

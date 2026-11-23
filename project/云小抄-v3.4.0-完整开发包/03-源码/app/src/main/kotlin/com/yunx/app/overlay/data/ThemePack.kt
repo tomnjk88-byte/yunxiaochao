@@ -29,7 +29,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+import kotlin.math.roundToInt
 
 /**
  * 主题包带出来的图片资源（v3.4.0）。
@@ -298,6 +301,83 @@ object ThemePacks {
     /** 封面文件；不存在 / 读不出来返回 null，界面退回渐变 */
     fun cover(pack: ThemePack): File? =
         pack.coverPath?.let { p -> File(p).takeIf { it.isFile && it.length() > 0 } }
+
+    // ------------------------------------------------------------------
+    // 导出 .sukisu（v3.4.2）
+    // ------------------------------------------------------------------
+
+    /**
+     * 把一个包导出成 SukiSU 的 `.sukisu` 文件。
+     *
+     * 流程跟导入完全反过来：
+     *   tuning 参数 → theme.json（SukiSU 字段名）
+     *   卡面 / 背景 / 底栏图标 → zip 里的 background / card_background / bottom_bar_icon_*
+     *   zip → AES-GCM 加密 → SKTH 外壳
+     *
+     * 导出的是「这条主题」的全部可见内容。纯参数包（没有图）也能导出，
+     * 对方装进去就是一套配色；带图的包则连壁纸和图标一起带走。
+     * 返回的字节直接写进用户选的文件即可。
+     */
+    fun exportSukisu(pack: ThemePack): ByteArray {
+        val assets = pack.assets
+        val files = LinkedHashMap<String, ByteArray>()
+        files["theme.json"] = sukisuThemeJson(pack).toByteArray(Charsets.UTF_8)
+        assets?.background?.let { p -> readFile(p)?.let { files["background"] = it } }
+        assets?.cardBackground?.let { p -> readFile(p)?.let { files["card_background"] = it } }
+        assets?.dockIcons?.forEach { (k, p) ->
+            if (k.isNotBlank()) readFile(p)?.let { files["bottom_bar_icon_$k"] = it }
+        }
+
+        val zip = java.io.ByteArrayOutputStream()
+        ZipOutputStream(zip).use { out ->
+            files.forEach { (name, data) ->
+                out.putNextEntry(ZipEntry(name))
+                out.write(data)
+                out.closeEntry()
+            }
+        }
+        return SukisuTheme.encrypt(zip.toByteArray())
+    }
+
+    /** 导出文件名：包名去掉非法字符，补上 .sukisu */
+    fun exportFileName(pack: ThemePack): String {
+        val safe = pack.name.replace(Regex("[\\\\/:*?\"<>|\\n\\r]"), "_").trim()
+            .ifBlank { "云小抄主题" }
+        return if (safe.endsWith(".sukisu", true)) safe else "$safe.sukisu"
+    }
+
+    /** tuning 参数 → SukiSU 的 theme.json。只写对方认得的字段，别塞私货。 */
+    private fun sukisuThemeJson(pack: ThemePack): String {
+        val t = runCatching { JSONObject(pack.tuningJson) }.getOrDefault(JSONObject())
+        val accent = t.optInt("customAccent", 0).takeIf { it != 0 }
+            ?: pack.dots.firstOrNull()
+            ?: 0
+        // 导入时是 0.35 + 0.65 × pct，这里反解回百分比
+        val cardAlpha = t.optDouble("cardAlpha", 1.0).toFloat().coerceIn(0.35f, 1f)
+        val cardPct = ((cardAlpha - 0.35f) / 0.65f * 100f).roundToInt().coerceIn(0, 100)
+        val blurPct = (t.optDouble("blurScale", 1.0).toFloat() / 1.3f * 100f)
+            .roundToInt().coerceIn(0, 100)
+        val scrimPct = (-t.optDouble("scrimBias", 0.0).toFloat() / 0.28f * 100f)
+            .roundToInt().coerceIn(0, 100)
+
+        return JSONObject().apply {
+            put("uiMode", 0)
+            put("themeMode", 0)
+            put("keyColor", accent)
+            put("colorStyle", t.optString("paletteStyle", "tonal"))
+            put("colorSpec", t.optString("colorSpec", "2025"))
+            put("cardBackgroundAlphaPercent", cardPct)
+            put("customBackgroundBlurPercent", blurPct)
+            put("customBackgroundScrimPercent", scrimPct)
+            val texts = pack.assets?.texts.orEmpty()
+            if (texts.isNotEmpty()) put("customTexts", JSONObject(texts as Map<*, *>))
+            put("exportedBy", "云小抄")
+        }.toString(2)
+    }
+
+    private fun readFile(path: String): ByteArray? = runCatching {
+        File(path).takeIf { it.isFile && it.length() > 0 }?.readBytes()
+    }.getOrNull()
 
     // ------------------------------------------------------------------
     // 导入

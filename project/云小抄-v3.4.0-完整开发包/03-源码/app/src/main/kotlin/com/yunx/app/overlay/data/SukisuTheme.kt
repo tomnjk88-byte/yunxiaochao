@@ -109,6 +109,28 @@ object SukisuTheme {
     }
 
     /**
+     * 加密成 `.sukisu`。与 [decrypt] 严格互逆：SKTH | IV(12B) | AES-GCM 密文。
+     *
+     * 每次导出都现取一个随机 IV —— GCM 下同一个 key + 同一个 IV 重复用是致命的，
+     * 而 SecureRandom 在这里的开销可以忽略。
+     */
+    fun encrypt(zip: ByteArray): ByteArray {
+        val iv = ByteArray(IV_SIZE).also { java.security.SecureRandom().nextBytes(it) }
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(
+            Cipher.ENCRYPT_MODE,
+            SecretKeySpec(KEY, "AES"),
+            GCMParameterSpec(TAG_BITS, iv)
+        )
+        val body = cipher.doFinal(zip)
+        val out = ByteArrayOutputStream(MAGIC.size + IV_SIZE + body.size)
+        out.write(MAGIC)
+        out.write(iv)
+        out.write(body)
+        return out.toByteArray()
+    }
+
+    /**
      * 把 zip 读成「文件名 → 字节」。
      *
      * 只取 basename：SukiSU 的包永远是平铺的，但有人重新打包时会多套一层文件夹，

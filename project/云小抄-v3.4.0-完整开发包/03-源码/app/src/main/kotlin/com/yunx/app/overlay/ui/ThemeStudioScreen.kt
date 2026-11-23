@@ -57,11 +57,14 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.ViewAgenda
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.Icon
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -93,6 +96,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.input.pointer.pointerInput
 import com.yunx.app.overlay.data.MotionPrefs
 import com.yunx.app.overlay.data.OverlayPrefs
+import com.yunx.app.overlay.data.ThemePack
+import com.yunx.app.overlay.data.ThemePacks
 import com.yunx.app.overlay.service.FloatingService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -811,6 +816,9 @@ private fun IconTextSection(
     val context = LocalContext.current
     val shapes = listOf("圆角", "圆形", "方形")
     val shapeKeys = listOf("rounded", "circle", "square")
+    // v3.4.2：界面标题文字自定义
+    var titleEditing by remember { mutableStateOf(false) }
+    var titleDraft by remember { mutableStateOf("") }
 
     GlassSectionTitle("文字")
     GlassCard {
@@ -823,6 +831,26 @@ private fun IconTextSection(
                 display = "${(fontDraft * 100).toInt()}%",
                 onChange = onFontDraft,
                 onCommit = onCommitFont
+            )
+        }
+        GlassDivider()
+        GlassRow(
+            title = "界面标题文字",
+            subtitle = if (tuning.customTitle.isBlank()) {
+                "顶栏抬头默认显示「云小抄」，点一下改成你喜欢的"
+            } else {
+                "当前抬头：「${tuning.customTitle}」"
+            },
+            icon = Icons.Rounded.TextFields,
+            onClick = {
+                titleDraft = tuning.customTitle
+                titleEditing = true
+            }
+        ) {
+            Text(
+                if (tuning.customTitle.isBlank()) "设置 ›" else "修改 ›",
+                fontSize = 10.sp,
+                color = GlassColors.Accent
             )
         }
         GlassDivider()
@@ -904,6 +932,42 @@ private fun IconTextSection(
                 onChange = { on -> update { it.copy(hideSubtitle = on) } }
             )
         }
+    }
+
+    if (titleEditing) {
+        AlertDialog(
+            onDismissRequest = { titleEditing = false },
+            title = {
+                Text("界面标题文字", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = titleDraft,
+                        onValueChange = { if (it.length <= 16) titleDraft = it },
+                        singleLine = true,
+                        placeholder = { Text("留空 = 云小抄", fontSize = 11.sp) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "最多 16 个字，顶栏抬头会跟着改；清空就恢复默认。",
+                        fontSize = 9.sp,
+                        lineHeight = 13.sp,
+                        color = GlassColors.TextMuted
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    update { it.copy(customTitle = titleDraft.trim()) }
+                    titleEditing = false
+                }) { Text("保存") }
+            },
+            dismissButton = {
+                TextButton(onClick = { titleEditing = false }) { Text("取消") }
+            }
+        )
     }
 }
 
@@ -1534,6 +1598,30 @@ private fun ThemePackageSection(
 ) {
     val context = LocalContext.current
     val t = LocalUiTokens.current
+    val exportScope = rememberCoroutineScope()
+    var exportPack by remember { mutableStateOf<ThemePack?>(null) }
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        val pack = exportPack
+        exportPack = null
+        if (uri != null && pack != null) {
+            exportScope.launch {
+                val ok = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val bytes = ThemePacks.exportSukisu(pack)
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                        true
+                    }.getOrDefault(false)
+                }
+                Toast.makeText(
+                    context,
+                    if (ok) "已导出「${pack.name}」" else "导出失败，换个目录再试",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
 
     GlassSectionTitle("主题包")
     GlassCard {
@@ -1608,6 +1696,33 @@ private fun ThemePackageSection(
             }
         ) {
             Text("复制 ›", fontSize = 10.sp, color = GlassColors.Accent)
+        }
+        GlassDivider()
+        GlassRow(
+            title = "导出主题包（.sukisu）",
+            subtitle = "把当前外观（含壁纸、卡面、底栏图标）打包成 SukiSU 格式的文件",
+            icon = Icons.Rounded.Style,
+            onClick = {
+                val applied = ThemePacks.byId(context, OverlayPrefs(context).themePackId)
+                val pack = ThemePack(
+                    id = applied?.id ?: "current",
+                    name = applied?.name?.takeIf { it.isNotBlank() } ?: "我的云小抄主题",
+                    author = "云小抄",
+                    version = "1.0.0",
+                    note = "",
+                    tags = emptyList(),
+                    dots = applied?.dots ?: emptyList(),
+                    downloads = 0,
+                    likes = 0,
+                    date = "",
+                    tuningJson = tuningToJson(GuideStyleStore.tuning.value),
+                    assets = applied?.assets
+                )
+                exportPack = pack
+                exportLauncher.launch(ThemePacks.exportFileName(pack))
+            }
+        ) {
+            Text("导出 ›", fontSize = 10.sp, color = GlassColors.TextSub)
         }
         GlassDivider()
         GlassRow(
@@ -1768,6 +1883,7 @@ private fun tuningToJson(t: ThemeTuning): String = JSONObject().apply {
     put("bottomDensity", t.bottomDensity)
     put("showSliderValue", t.showSliderValue)
     put("progressiveScrim", t.progressiveScrim)
+    put("customTitle", t.customTitle)
 }.toString()
 
 internal fun tuningFromJson(text: String): ThemeTuning? = runCatching {
@@ -1790,6 +1906,7 @@ internal fun tuningFromJson(text: String): ThemeTuning? = runCatching {
         bottomDensity = o.optString("bottomDensity", "normal"),
         showSliderValue = o.optBoolean("showSliderValue", false),
         progressiveScrim = o.optBoolean("progressiveScrim", false),
+        customTitle = o.optString("customTitle", ""),
         // 背景图是本机文件，不随主题文本走
         backgroundKey = ""
     )

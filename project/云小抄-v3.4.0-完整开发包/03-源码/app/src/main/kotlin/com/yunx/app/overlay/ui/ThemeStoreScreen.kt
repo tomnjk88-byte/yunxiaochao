@@ -50,15 +50,19 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FileDownload
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Sort
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,6 +75,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
@@ -82,8 +88,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.yunx.app.overlay.data.OverlayPrefs
+import com.yunx.app.overlay.data.RemoteCatalog
+import com.yunx.app.overlay.data.RemoteTheme
 import com.yunx.app.overlay.data.ThemePack
 import com.yunx.app.overlay.data.ThemePacks
+import com.yunx.app.overlay.data.ThemeStoreRemote
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** 三个排序项。存下标，界面上循环切 */
 private val SORT_LABELS = listOf("默认", "最新", "最热")
@@ -116,10 +128,109 @@ fun ThemeStorePage(
     // 删除只影响这一个页面，自己 +1 重读，不必惊动外面
     var localTick by remember { mutableIntStateOf(0) }
 
-    val packList = remember(tick, localTick) { ThemePacks.all(context) }
-    val tags = remember(packList) {
-        (listOf("全部") + packList.flatMap { it.tags }).distinct().take(9)
+    // v3.4.2：本机 / 在线（SukiSU Nova 镜像）两个来源
+    var source by remember { mutableIntStateOf(0) }
+    var remoteCatalog by remember { mutableStateOf<RemoteCatalog?>(null) }
+    var remoteLoading by remember { mutableStateOf(false) }
+    var remoteError by remember { mutableStateOf<String?>(null) }
+    var remoteReload by remember { mutableIntStateOf(0) }
+    // 正在下载的那条 (id)，用来在卡片上转圈并挡住重复点击
+    var downloadingId by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    // 导出 .sukisu：先记下要导的包，等系统文件选择器回 Uri 再写
+    var exportPack by remember { mutableStateOf<ThemePack?>(null) }
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        val pack = exportPack
+        exportPack = null
+        if (uri != null && pack != null) {
+            scope.launch {
+                val ok = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val bytes = ThemePacks.exportSukisu(pack)
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                        true
+                    }.getOrDefault(false)
+                }
+                Toast.makeText(
+                    context,
+                    if (ok) "已导出「${pack.name}」" else "导出失败，换个目录再试",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
+
+    val packList = remember(tick, localTick) { ThemePacks.all(context) }
+    val remoteThemes = remoteCatalog?.themes.orEmpty()
+    val tags = remember(packList, remoteThemes) {
+        (listOf("全部") + (packList.flatMap { it.tags } + remoteThemes.flatMap { it.tags }))
+            .distinct().take(9)
+    }
+
+    // 在线目录只在切到「在线」时拉一次；点重试 +1 重新拉
+    LaunchedEffect(source, remoteReload) {
+        if (source != 1) return@LaunchedEffect
+        remoteLoading = true
+        remoteError = null
+        val result = withContext(Dispatchers.IO) {
+            runCatching { ThemeStoreRemote.load(context) }
+        }
+        result.onSuccess { remoteCatalog = it }
+            .onFailure { remoteError = it.message ?: "连不上主题商店" }
+        remoteLoading = false
+    }
+
+    // 在线列表的搜索过滤（标签筛选由上面的 tag 统一管）
+    val remoteShown = remember(remoteThemes, query, tag) {
+        val q = query.trim()
+        remoteThemes.filter { theme ->
+            (tag == "全部" || theme.tags.contains(tag)) &&
+                (q.isEmpty() ||
+                    theme.name.contains(q, true) ||
+                    theme.author.contains(q, true) ||
+                    theme.description.contains(q, true) ||
+                    theme.tags.any { it.contains(q, true) })
+        }
+    }
+
+    fun installRemote(theme: RemoteTheme) {
+        if (downloadingId != null) return
+        downloadingId = theme.id
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val bytes = ThemeStoreRemote.download(context, theme)
+                    ThemePacks.importBytes(context, bytes, "${theme.name}.sukisu")
+                }
+            }
+            downloadingId = null
+            val imported = result.getOrNull()
+            if (imported == null) {
+                Toast.makeText(
+                    context,
+                    "下载失败：${result.exceptionOrNull()?.message ?: "网络异常"}",
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }
+            val pack = imported.pack
+            if (pack == null) {
+                Toast.makeText(
+                    context,
+                    imported.error ?: "这个包导不进来",
+                    Toast.LENGTH_LONG
+                ).show()
+            } else {
+                localTick++
+                onApply(pack)
+                Toast.makeText(context, "已下载并应用「${pack.name}」", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     val shown = remember(packList, query, tag, sort) {
         val q = query.trim()
         packList.asSequence()
@@ -162,6 +273,9 @@ fun ThemeStorePage(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.fillMaxSize()
         ) {
+            item(key = "source", span = { GridItemSpan(maxLineSpan) }) {
+                SourceTabs(selected = source, onSelect = { source = it })
+            }
             item(key = "search", span = { GridItemSpan(maxLineSpan) }) {
                 SearchField(
                     query = query,
@@ -184,65 +298,138 @@ fun ThemeStorePage(
                             )
                         }
                     }
-                    Spacer(Modifier.width(7.dp))
-                    SortChip(label = SORT_LABELS[sort]) { sort = (sort + 1) % SORT_LABELS.size }
+                    if (source == 0) {
+                        Spacer(Modifier.width(7.dp))
+                        SortChip(label = SORT_LABELS[sort]) { sort = (sort + 1) % SORT_LABELS.size }
+                    }
                 }
             }
-            if (featured != null) {
-                item(key = "featured", span = { GridItemSpan(maxLineSpan) }) {
-                    FeatureCard(
-                        pack = featured,
-                        applied = featured.id == appliedId,
-                        onApply = { onApply(featured) },
-                        onLongPress = { actionPack = featured }
+            if (source == 0) {
+                if (featured != null) {
+                    item(key = "featured", span = { GridItemSpan(maxLineSpan) }) {
+                        FeatureCard(
+                            pack = featured,
+                            applied = featured.id == appliedId,
+                            onApply = { onApply(featured) },
+                            onLongPress = { actionPack = featured }
+                        )
+                    }
+                }
+                item(key = "count", span = { GridItemSpan(maxLineSpan) }) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            if (tag == "全部" && query.isBlank()) "全部主题" else "筛选结果",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = t.text,
+                            style = TextStyle(shadow = readableShadow())
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "${gridPacks.size} 套",
+                            fontSize = 9.5.sp,
+                            color = t.textMuted
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            "长按可删除 / 导出",
+                            fontSize = 9.sp,
+                            color = t.textMuted.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+                items(gridPacks, key = { it.id }) { pack ->
+                    ThemePackCard(
+                        pack = pack,
+                        applied = pack.id == appliedId,
+                        onApply = { onApply(pack) },
+                        onLongPress = { actionPack = pack }
                     )
                 }
-            }
-            item(key = "count", span = { GridItemSpan(maxLineSpan) }) {
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        if (tag == "全部" && query.isBlank()) "全部主题" else "筛选结果",
-                        fontSize = 12.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = t.text,
-                        style = TextStyle(shadow = readableShadow())
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        "${gridPacks.size} 套",
-                        fontSize = 9.5.sp,
-                        color = t.textMuted
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        "长按可删除 / 导出",
-                        fontSize = 9.sp,
-                        color = t.textMuted.copy(alpha = 0.8f)
-                    )
+                if (gridPacks.isEmpty() && featured == null) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        GlassHint("没有匹配的主题。换个词，或者把文件拖进来 —— 右下角那颗按钮就是入口。")
+                    }
                 }
-            }
-            items(gridPacks, key = { it.id }) { pack ->
-                ThemePackCard(
-                    pack = pack,
-                    applied = pack.id == appliedId,
-                    onApply = { onApply(pack) },
-                    onLongPress = { actionPack = pack }
-                )
-            }
-            if (gridPacks.isEmpty() && featured == null) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    GlassHint("没有匹配的主题。换个词，或者把文件拖进来 —— 右下角那颗按钮就是入口。")
+            } else {
+                val catalog = remoteCatalog
+                when {
+                    catalog == null && remoteLoading -> {
+                        item(key = "remote.loading", span = { GridItemSpan(maxLineSpan) }) {
+                            RemoteStatusRow(text = "正在连接 SukiSU 主题商店…", loading = true)
+                        }
+                    }
+                    catalog == null -> {
+                        item(key = "remote.error", span = { GridItemSpan(maxLineSpan) }) {
+                            RemoteStatusRow(
+                                text = remoteError ?: "连不上主题商店",
+                                loading = false,
+                                onRetry = { if (!remoteLoading) remoteReload++ }
+                            )
+                        }
+                    }
+                    else -> {
+                        item(key = "remote.count", span = { GridItemSpan(maxLineSpan) }) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "SukiSU 在线商店",
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = t.text,
+                                    style = TextStyle(shadow = readableShadow())
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text("${remoteShown.size} 套", fontSize = 9.5.sp, color = t.textMuted)
+                                Spacer(Modifier.weight(1f))
+                                Text(
+                                    "已过滤 ${catalog.filteredR18} 个 R18",
+                                    fontSize = 9.sp,
+                                    color = t.textMuted.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                        items(remoteShown, key = { "remote." + it.id }) { theme ->
+                            RemoteThemeCard(
+                                theme = theme,
+                                coverUrl = ThemeStoreRemote.assetUrl(
+                                    catalog.baseUrl,
+                                    theme.previewPath.ifBlank {
+                                        theme.screenshotPaths.firstOrNull().orEmpty()
+                                    }
+                                ),
+                                downloading = downloadingId == theme.id,
+                                onClick = { installRemote(theme) }
+                            )
+                        }
+                        if (remoteShown.isEmpty()) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                GlassHint("没有匹配的在线主题。换个关键词，或者切回「本机」。")
+                            }
+                        }
+                        if (remoteLoading) {
+                            item(key = "remote.refreshing", span = { GridItemSpan(maxLineSpan) }) {
+                                RemoteStatusRow(text = "正在刷新…", loading = true)
+                            }
+                        }
+                    }
                 }
             }
             item(key = "tail", span = { GridItemSpan(maxLineSpan) }) {
                 Column(Modifier.padding(top = 6.dp)) {
                     GlassHint(
-                        "认得三种包：云小抄的 .json、带封面的 .zip，以及 SukiSU 的 .sukisu" +
-                            "（外面又套了一层 zip 的也认）。选进来就会当场换上 —— 背景、卡面、" +
-                            "底栏图标都跟着变。"
+                        if (source == 1) {
+                            "在线商店来自 SukiSU Nova 官方镜像，R18 内容已自动过滤。" +
+                                "点一下就会下载、导入并当场换上，装好后也会出现在「本机」里。"
+                        } else {
+                            "认得三种包：云小抄的 .json、带封面的 .zip，以及 SukiSU 的 .sukisu" +
+                                "（外面又套了一层 zip 的也认）。长按卡片可以导出 .sukisu 发给别人。"
+                        }
                     )
                     Text(
                         "去主题设置里继续微调 ›",
@@ -291,6 +478,11 @@ fun ThemeStorePage(
                         Toast.makeText(context, "已删除「${pack.name}」", Toast.LENGTH_SHORT).show()
                     }
                 },
+                onExport = {
+                    actionPack = null
+                    exportPack = pack
+                    exportLauncher.launch(ThemePacks.exportFileName(pack))
+                },
                 onClose = { actionPack = null }
             )
         }
@@ -309,6 +501,7 @@ private fun PackActionSheet(
     applied: Boolean,
     onApply: () -> Unit,
     onDelete: () -> Unit,
+    onExport: () -> Unit,
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
@@ -372,6 +565,16 @@ private fun PackActionSheet(
                         Toast.makeText(context, "已复制，粘贴给别人即可", Toast.LENGTH_SHORT).show()
                         onClose()
                     }
+                )
+                Spacer(Modifier.height(8.dp))
+                SheetAction(
+                    text = if (pack.assets?.isEmpty == false) {
+                        "导出主题包（.sukisu · 含图）"
+                    } else {
+                        "导出主题包（.sukisu）"
+                    },
+                    primary = false,
+                    onClick = onExport
                 )
                 if (!pack.builtin) {
                     Spacer(Modifier.height(8.dp))
@@ -560,6 +763,180 @@ private fun SortChip(label: String, onClick: () -> Unit) {
 // ----------------------------------------------------------------------
 // 卡片
 // ----------------------------------------------------------------------
+
+/** 来源切换：本机 / SukiSU 在线商店。做成两颗等宽胶囊，选了哪边一眼看得出。 */
+@Composable
+private fun SourceTabs(selected: Int, onSelect: (Int) -> Unit) {
+    val t = LocalUiTokens.current
+    val labels = listOf("本机主题", "SukiSU 在线")
+    Row(
+        Modifier.fillMaxWidth().padding(top = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        labels.forEachIndexed { index, label ->
+            val on = selected == index
+            val shape = RoundedCornerShape(13.dp)
+            Box(
+                Modifier
+                    .weight(1f)
+                    .clip(shape)
+                    .background(
+                        if (on) Brush.horizontalGradient(listOf(t.accent, t.accent2))
+                        else Brush.verticalGradient(
+                            listOf(t.cardTop.copy(alpha = 0.7f), t.cardBottom.copy(alpha = 0.6f))
+                        )
+                    )
+                    .border(1.dp, if (on) Color.Transparent else t.divider, shape)
+                    .combinedClickableCompat(onClick = { onSelect(index) })
+                    .padding(vertical = 9.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    label,
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (on) Color.White else t.textSub
+                )
+            }
+        }
+    }
+}
+
+/** 在线商店的加载 / 出错行。出错时给一个「重试」。 */
+@Composable
+private fun RemoteStatusRow(text: String, loading: Boolean, onRetry: (() -> Unit)? = null) {
+    val t = LocalUiTokens.current
+    GlassCard {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(14.dp),
+                    strokeWidth = 1.6.dp,
+                    color = t.accent
+                )
+                Spacer(Modifier.width(9.dp))
+            }
+            Text(
+                text,
+                fontSize = 10.5.sp,
+                lineHeight = 15.sp,
+                color = t.textSub,
+                modifier = Modifier.weight(1f)
+            )
+            if (onRetry != null) {
+                Text(
+                    "重试",
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = t.accent,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(t.accent.copy(alpha = 0.12f))
+                        .combinedClickableCompat(onRetry)
+                        .padding(horizontal = 11.dp, vertical = 6.dp)
+                )
+            }
+        }
+    }
+}
+
+/** 在线主题卡。封面直接走 URL，Coil 自己缓存；下载中转一圈，不给重复点。 */
+@Composable
+private fun RemoteThemeCard(
+    theme: RemoteTheme,
+    coverUrl: String?,
+    downloading: Boolean,
+    onClick: () -> Unit
+) {
+    val t = LocalUiTokens.current
+    val shape = RoundedCornerShape(18.dp)
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(156.dp)
+            .clip(shape)
+            .background(Brush.linearGradient(listOf(t.cardTop, t.cardBottom)))
+            .border(1.dp, t.divider, shape)
+            .combinedClickableCompat(onClick)
+    ) {
+        if (coverUrl != null) {
+            AsyncImage(
+                model = coverUrl,
+                contentDescription = theme.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(104.dp)
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.74f))
+                    )
+                )
+        )
+        Row(
+            Modifier.align(Alignment.TopStart).padding(9.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            SourceChip(if (theme.adaptive) "自适应" else "SUKISU")
+            if (theme.downloads > 0) StatChip(Icons.Rounded.Download, compact(theme.downloads.toInt()))
+        }
+        Column(
+            Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 11.dp, end = 44.dp, bottom = 10.dp)
+        ) {
+            Text(
+                theme.name,
+                fontSize = 13.5.sp,
+                lineHeight = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                theme.author,
+                fontSize = 8.5.sp,
+                color = Color.White.copy(alpha = 0.76f),
+                maxLines = 1
+            )
+        }
+        Box(
+            Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 9.dp, bottom = 10.dp)
+                .size(30.dp)
+                .shadow(8.dp, CircleShape, clip = false, ambientColor = Color(0x33000000))
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.94f)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (downloading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(15.dp),
+                    strokeWidth = 1.8.dp,
+                    color = Color(0xFF141A2A)
+                )
+            } else {
+                Icon(
+                    Icons.Rounded.Download,
+                    contentDescription = "下载并应用",
+                    modifier = Modifier.size(15.dp),
+                    tint = Color(0xFF141A2A)
+                )
+            }
+        }
+    }
+}
 
 @Composable
 private fun FeatureCard(

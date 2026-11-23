@@ -278,8 +278,9 @@ private fun DockItem(
             }
         }
         Spacer(Modifier.height(4.dp))
+        // v3.4.2：底栏文字可自定义（主题设置 → 图标文字 → 界面文本自定义）
         Text(
-            entry.label,
+            LocalThemeTuning.current.text("dock." + entry.iconKey, entry.label),
             fontSize = 9.5.sp,
             fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
             color = tint,

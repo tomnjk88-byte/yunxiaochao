@@ -176,6 +176,7 @@ import com.yunx.app.overlay.ui.LocalThemeTuning
 import com.yunx.app.overlay.ui.DeckCard
 import com.yunx.app.overlay.ui.GuideStyleStore
 import com.yunx.app.overlay.ui.StackDeck
+import com.yunx.app.overlay.ui.text
 import com.yunx.app.overlay.ui.StackModule
 import com.yunx.app.overlay.ui.ThemeSkin
 import com.yunx.app.overlay.ui.ThemeWipeLayer
@@ -608,7 +609,7 @@ private fun HomeScreen(
     LaunchedEffect(Unit) {
         val saved = prefs.themePackId
         if (saved.isNotBlank()) {
-            ThemePacks.byId(context, saved)?.let { ThemeSkin.load(it.assets) }
+            ThemePacks.byId(context, saved)?.let { ThemeSkin.loadMerged(context, it.assets) }
         }
     }
     // v3.2.0：日夜切换 = 《春秋》那种圆形扩散。
@@ -879,7 +880,7 @@ private fun HomeScreen(
                 parsed.copy(backgroundKey = newBg)
             )
             // 卡面 / 底栏图标：清掉上一套再挂这一套，别让两套图叠在一起
-            ThemeSkin.load(pack.assets)
+            ThemeSkin.loadMerged(context, pack.assets)
             prefs.themePackId = pack.id
             appliedPackId = pack.id
             val extra = if (pack.assets?.isEmpty == false) "（含卡面 / 图标）" else ""
@@ -1504,7 +1505,7 @@ private fun HomeScreen(
         if (dockNav) {
             // v3.3.0：商店式导航的顶栏 —— 参考界面那种「一行圆钮 + 一个大标题」
             DockHeader(
-                title = styleTuning.customTitle.ifBlank { headerTitle ?: "云小抄" },
+                title = styleTuning.text("app.title", headerTitle ?: "云小抄"),
                 subtitle = headerSubtitle,
                 dark = uiDark,
                 onOpenMenu = openMenu,

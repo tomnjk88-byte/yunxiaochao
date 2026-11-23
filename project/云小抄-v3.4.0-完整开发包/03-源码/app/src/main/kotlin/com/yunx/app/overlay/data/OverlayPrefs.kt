@@ -475,6 +475,33 @@ class OverlayPrefs(context: Context) {
             prefs.edit().putString(KEY_THEME_PACK, value).apply()
         }
 
+    /** v3.4.2：桌面图标（classic / new / round / photo），对应清单里的四个入口 */
+    var appIconKey: String
+        get() = prefs.getString(KEY_APP_ICON, "classic")?.takeIf { it.isNotBlank() } ?: "classic"
+        set(value) {
+            prefs.edit().putString(KEY_APP_ICON, value).apply()
+        }
+
+    /**
+     * v3.4.2：界面文本自定义。JSON 对象，如 {"app.title":"云小抄","dock.home":"小抄"}。
+     * 存字符串而不是拆成一堆布尔/文本字段，是因为键会继续增加，拆开会把 prefs 撑爆。
+     */
+    var themeCustomTexts: String
+        get() = prefs.getString(KEY_CUSTOM_TEXTS, "") ?: ""
+        set(value) {
+            prefs.edit().putString(KEY_CUSTOM_TEXTS, value).apply()
+        }
+
+    /**
+     * v3.4.2：用户手动指定的底栏图标。JSON 对象，key ∈ home/superuser/module/setting，
+     * value = 私有目录里的图片绝对路径。优先级高于主题包自带的图标。
+     */
+    var themeDockIcons: String
+        get() = prefs.getString(KEY_DOCK_ICONS, "") ?: ""
+        set(value) {
+            prefs.edit().putString(KEY_DOCK_ICONS, value).apply()
+        }
+
     // ------------------------------------------------------------------
     // 攻略来源（v1.7.0）：网盘 / 本地文件夹
     // ------------------------------------------------------------------
@@ -945,6 +972,10 @@ class OverlayPrefs(context: Context) {
         private const val KEY_NAV_STYLE = "nav_style"
         // v3.3.0：正在用的主题包
         private const val KEY_THEME_PACK = "theme_pack_id"
+        // v3.4.2：桌面图标 / 界面文本 / 底栏自定义图标
+        private const val KEY_APP_ICON = "app_icon_key"
+        private const val KEY_CUSTOM_TEXTS = "theme_custom_texts"
+        private const val KEY_DOCK_ICONS = "theme_dock_icons"
         private const val KEY_EXPANDED_W = "expanded_w"
         private const val KEY_EXPANDED_H = "expanded_h"
         private const val KEY_EXPANDED_ALPHA = "expanded_alpha"

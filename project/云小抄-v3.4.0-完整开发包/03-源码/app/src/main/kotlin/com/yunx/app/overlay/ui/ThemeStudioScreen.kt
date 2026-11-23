@@ -42,6 +42,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Dashboard
@@ -94,6 +95,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.input.pointer.pointerInput
+import com.yunx.app.overlay.data.AppIcon
 import com.yunx.app.overlay.data.MotionPrefs
 import com.yunx.app.overlay.data.OverlayPrefs
 import com.yunx.app.overlay.data.ThemePack
@@ -816,9 +818,40 @@ private fun IconTextSection(
     val context = LocalContext.current
     val shapes = listOf("圆角", "圆形", "方形")
     val shapeKeys = listOf("rounded", "circle", "square")
-    // v3.4.2：界面标题文字自定义
-    var titleEditing by remember { mutableStateOf(false) }
-    var titleDraft by remember { mutableStateOf("") }
+    // v3.4.2：桌面图标 + 界面文本自定义
+    var appIcon by remember { mutableStateOf(AppIcon.current(context)) }
+    var iconPicking by remember { mutableStateOf(false) }
+    var iconSwitched by remember { mutableStateOf(false) }
+    var textEditing by remember { mutableStateOf(false) }
+    var drafts by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+
+    GlassSectionTitle("应用图标与文字")
+    GlassCard {
+        GlassRow(
+            title = "应用图标喵~",
+            subtitle = "当前：" + (
+                AppIcon.options.firstOrNull { it.key == appIcon }?.label ?: "经典"
+                ) + " · 点一下换桌面图标",
+            icon = Icons.Rounded.Apps,
+            onClick = { iconPicking = true }
+        ) {
+            Text("更换 ›", fontSize = 10.sp, color = GlassColors.Accent)
+        }
+        GlassDivider()
+        GlassRow(
+            title = "界面文本自定义喵~",
+            subtitle = "顶栏标题和底栏四个标签的名字，都能改成你喜欢的",
+            icon = Icons.Rounded.TextFields,
+            onClick = {
+                drafts = THEME_TEXT_KEYS.associate { (key, _) ->
+                    key to (parseTextMap(tuning.customTextsJson)[key].orEmpty())
+                }
+                textEditing = true
+            }
+        ) {
+            Text("编辑 ›", fontSize = 10.sp, color = GlassColors.Accent)
+        }
+    }
 
     GlassSectionTitle("文字")
     GlassCard {
@@ -831,26 +864,6 @@ private fun IconTextSection(
                 display = "${(fontDraft * 100).toInt()}%",
                 onChange = onFontDraft,
                 onCommit = onCommitFont
-            )
-        }
-        GlassDivider()
-        GlassRow(
-            title = "界面标题文字",
-            subtitle = if (tuning.customTitle.isBlank()) {
-                "顶栏抬头默认显示「云小抄」，点一下改成你喜欢的"
-            } else {
-                "当前抬头：「${tuning.customTitle}」"
-            },
-            icon = Icons.Rounded.TextFields,
-            onClick = {
-                titleDraft = tuning.customTitle
-                titleEditing = true
-            }
-        ) {
-            Text(
-                if (tuning.customTitle.isBlank()) "设置 ›" else "修改 ›",
-                fontSize = 10.sp,
-                color = GlassColors.Accent
             )
         }
         GlassDivider()
@@ -934,24 +947,101 @@ private fun IconTextSection(
         }
     }
 
-    if (titleEditing) {
+    // ---------------- 应用图标选择 ----------------
+    if (iconPicking) {
         AlertDialog(
-            onDismissRequest = { titleEditing = false },
+            onDismissRequest = { iconPicking = false },
             title = {
-                Text("界面标题文字", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text("应用图标喵~", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             },
             text = {
                 Column {
-                    OutlinedTextField(
-                        value = titleDraft,
-                        onValueChange = { if (it.length <= 16) titleDraft = it },
-                        singleLine = true,
-                        placeholder = { Text("留空 = 云小抄", fontSize = 11.sp) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(6.dp))
+                    AppIcon.options.forEach { option ->
+                        val active = option.key == appIcon
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (active) GlassColors.Accent.copy(alpha = 0.14f)
+                                    else Color.Transparent
+                                )
+                                .clickable {
+                                    if (AppIcon.apply(context, option.key)) {
+                                        appIcon = option.key
+                                        iconSwitched = true
+                                    }
+                                    iconPicking = false
+                                }
+                                .padding(horizontal = 10.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    option.label,
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = GlassColors.Text
+                                )
+                                Text(
+                                    option.hint,
+                                    fontSize = 9.sp,
+                                    color = GlassColors.TextMuted
+                                )
+                            }
+                            if (active) {
+                                Icon(
+                                    Icons.Rounded.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(15.dp),
+                                    tint = GlassColors.Accent
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        "最多 16 个字，顶栏抬头会跟着改；清空就恢复默认。",
+                        "换完桌面图标会重新加载几秒，属正常现象；四套图标互斥，" +
+                            "不会同时出现两个。",
+                        fontSize = 9.sp,
+                        lineHeight = 13.sp,
+                        color = GlassColors.TextMuted
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { iconPicking = false }) { Text("完成") }
+            }
+        )
+    }
+
+    // ---------------- 界面文本自定义 ----------------
+    if (textEditing) {
+        AlertDialog(
+            onDismissRequest = { textEditing = false },
+            title = {
+                Text("界面文本自定义喵~", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            },
+            text = {
+                Column {
+                    THEME_TEXT_KEYS.forEach { (key, label) ->
+                        OutlinedTextField(
+                            value = drafts[key].orEmpty(),
+                            onValueChange = { v ->
+                                if (v.length <= 16) drafts = drafts + (key to v)
+                            },
+                            singleLine = true,
+                            label = { Text(label, fontSize = 10.sp) },
+                            placeholder = {
+                                Text(defaultTextFor(key), fontSize = 11.sp)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 6.dp)
+                        )
+                    }
+                    Text(
+                        "留空 = 用默认文字；每条最多 16 个字。",
                         fontSize = 9.sp,
                         lineHeight = 13.sp,
                         color = GlassColors.TextMuted
@@ -960,14 +1050,33 @@ private fun IconTextSection(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    update { it.copy(customTitle = titleDraft.trim()) }
-                    titleEditing = false
+                    // 同时清掉旧的 customTitle，避免两套数据互相覆盖
+                    update {
+                        it.copy(
+                            customTextsJson = textMapToJson(drafts),
+                            customTitle = ""
+                        )
+                    }
+                    textEditing = false
+                    Toast.makeText(context, "界面文字已更新", Toast.LENGTH_SHORT).show()
                 }) { Text("保存") }
             },
             dismissButton = {
-                TextButton(onClick = { titleEditing = false }) { Text("取消") }
+                TextButton(onClick = { textEditing = false }) { Text("取消") }
             }
         )
+    }
+
+    // 换完图标给一条提示：告诉用户去哪里看新图标
+    if (iconSwitched) {
+        LaunchedEffect(Unit) {
+            Toast.makeText(
+                context,
+                "桌面图标已切换，回桌面看看（可能要等几秒）",
+                Toast.LENGTH_SHORT
+            ).show()
+            iconSwitched = false
+        }
     }
 }
 
@@ -1146,6 +1255,92 @@ private fun BottomBarSection(
             )
         }
     }
+
+    // ------------------------------------------------------------------
+    // v3.4.2：四个标签图标（对齐 SukiSU Nova「底栏与导航」那四行）
+    // 自定义图存私有目录，优先级高于主题包自带的图标。
+    // ------------------------------------------------------------------
+    val prefs = remember { OverlayPrefs(context) }
+    var dockIcons by remember { mutableStateOf(parseTextMap(prefs.themeDockIcons)) }
+    var pendingDock by remember { mutableStateOf<String?>(null) }
+
+    fun refreshDock() {
+        ThemeSkin.loadMerged(context, ThemePacks.byId(context, prefs.themePackId)?.assets)
+    }
+
+    fun clearDock(key: String) {
+        val map = parseTextMap(prefs.themeDockIcons).toMutableMap()
+        map.remove(key)?.let { old -> runCatching { File(old).delete() } }
+        prefs.themeDockIcons = textMapToJson(map)
+        dockIcons = map
+        refreshDock()
+    }
+
+    val dockPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        val key = pendingDock
+        pendingDock = null
+        if (uri == null || key == null) return@rememberLauncherForActivityResult
+        runCatching {
+            val dest = File(context.filesDir, "dock_icon_${key}_${System.currentTimeMillis()}.img")
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                dest.outputStream().use { out -> input.copyTo(out) }
+            } ?: error("无法读取所选图片")
+            val map = parseTextMap(prefs.themeDockIcons).toMutableMap()
+            map[key]?.let { old -> runCatching { File(old).delete() } }
+            map[key] = dest.absolutePath
+            prefs.themeDockIcons = textMapToJson(map)
+            dockIcons = map
+            refreshDock()
+        }.onFailure {
+            Toast.makeText(context, "设置图标失败：${it.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    GlassSectionTitle("标签图标")
+    GlassCard {
+        listOf(
+            "home" to ("首页标签图标" to Icons.Rounded.Dashboard),
+            "superuser" to ("超级用户标签图标" to Icons.Rounded.Swipe),
+            "module" to ("模块标签图标" to Icons.Rounded.Style),
+            "setting" to ("设置标签图标" to Icons.Rounded.Tune)
+        ).forEachIndexed { index, (key, pair) ->
+            val (label, icon) = pair
+            val has = dockIcons.containsKey(key)
+            GlassRow(
+                title = label,
+                subtitle = if (has) "正在使用自定义图片 · 点击替换" else "默认图标 · 点击选一张图",
+                icon = icon,
+                onClick = {
+                    pendingDock = key
+                    dockPicker.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                }
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (has) {
+                        Text(
+                            "清除",
+                            fontSize = 10.sp,
+                            color = GlassColors.TextSub,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { clearDock(key) }
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    Text("更换 ›", fontSize = 10.sp, color = GlassColors.Accent)
+                }
+            }
+            if (index < 3) GlassDivider()
+        }
+    }
+    GlassHint(
+        "这里选的图只换底栏那一个格子；想让四个一起换，用「主题包」里带图的那套。"
+    )
 }
 
 // ======================================================================
@@ -1884,6 +2079,11 @@ private fun tuningToJson(t: ThemeTuning): String = JSONObject().apply {
     put("showSliderValue", t.showSliderValue)
     put("progressiveScrim", t.progressiveScrim)
     put("customTitle", t.customTitle)
+    // v3.4.2：文字一起导出 —— 同型号设备之间最常用的搬法。
+    // 底栏图标指向本机文件路径，跨设备必然失效，所以不导出。
+    if (t.customTextsJson.isNotBlank()) {
+        runCatching { put("customTexts", JSONObject(t.customTextsJson)) }
+    }
 }.toString()
 
 internal fun tuningFromJson(text: String): ThemeTuning? = runCatching {
@@ -1907,6 +2107,9 @@ internal fun tuningFromJson(text: String): ThemeTuning? = runCatching {
         showSliderValue = o.optBoolean("showSliderValue", false),
         progressiveScrim = o.optBoolean("progressiveScrim", false),
         customTitle = o.optString("customTitle", ""),
+        customTextsJson = o.optJSONObject("customTexts")?.toString().orEmpty(),
+        // 底栏图标指向本机文件，跨设备导入会失效，所以不在文本里带
+        dockIconsJson = "",
         // 背景图是本机文件，不随主题文本走
         backgroundKey = ""
     )

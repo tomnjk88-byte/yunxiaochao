@@ -524,6 +524,44 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- 桌面图标（第 3 套：圆形）—— 与上面 `.MainActivityIcon2` 同一套机制：
+             四个入口互斥，同一时刻只启用一个，桌面永远只看到一个图标。
+             ★ 类名必须以 MainActivityIcon2 结尾：YunXApp 的防改包校验会检查
+               getLaunchIntentForPackage() 返回的组件名，不匹配会直接杀进程。
+               alias 的 name 就是它的组件名，所以这里用 `iconround.MainActivityIcon2` 这种形式。 -->
+        <activity-alias
+            android:name="com.yunx.app.iconround.MainActivityIcon2"
+            android:enabled="false"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:icon="@mipmap/ic_launcher_round"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:label="@string/app_name"
+            android:taskAffinity="com.yunx.app.guide.home"
+            android:targetActivity=".overlay.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- 桌面图标（第 4 套：手绘款） -->
+        <activity-alias
+            android:name="com.yunx.app.iconphoto.MainActivityIcon2"
+            android:enabled="false"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:icon="@drawable/icon2"
+            android:roundIcon="@drawable/icon2"
+            android:label="@string/app_name"
+            android:taskAffinity="com.yunx.app.guide.home"
+            android:targetActivity=".overlay.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- 崩溃界面：独立进程运行，避免主线程崩溃后无法展示 UI -->
         <activity
             android:name=".crash.CrashActivity"

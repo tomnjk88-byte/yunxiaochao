@@ -117,6 +117,28 @@ object ThemeSkin {
     }
 
     /**
+     * v3.4.2：主题包自带图标 + 用户手动指定的底栏图标，合并后加载。
+     *
+     * 用户指定优先 —— 主题包是「整套换」，但用户只改了其中一个格子时，
+     * 不该被主题包覆盖回去。没有主题包、只设了图标也要能生效。
+     */
+    fun loadMerged(context: android.content.Context, assets: ThemeAssets?) {
+        val user = parseTextMap(com.yunx.app.overlay.data.OverlayPrefs(context).themeDockIcons)
+        if (user.isEmpty()) {
+            load(assets)
+            return
+        }
+        load(
+            ThemeAssets(
+                background = assets?.background,
+                cardBackground = assets?.cardBackground,
+                dockIcons = assets?.dockIcons.orEmpty() + user,
+                texts = assets?.texts.orEmpty()
+            )
+        )
+    }
+
+    /**
      * 解一张本地图，长边压到 [maxEdge] 以内。
      *
      * 卡片底图会铺满整张卡（宽 350dp 上下，3x 屏约 1050px），1800 已经够；

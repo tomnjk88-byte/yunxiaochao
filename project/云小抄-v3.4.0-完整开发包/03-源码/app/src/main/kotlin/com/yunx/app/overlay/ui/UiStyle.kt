@@ -339,8 +339,68 @@ data class ThemeTuning(
      * 自定义背景："" = 跟风格走的程序壁纸；"system" = 系统桌面壁纸；
      * 其他 = 私有目录里的图片绝对路径
      */
-    val backgroundKey: String = ""
+    val backgroundKey: String = "",
+    /**
+     * v3.4.2：界面文本自定义。JSON 对象（键见 [THEME_TEXT_KEYS]），空串 = 全部默认。
+     * 存 JSON 而不是拆字段：键还会继续加（首页标题、副标题、各页抬头……），
+     * 拆成一个个 prefs 字段会让 readTuning/writeTuning 变成几十行的流水账。
+     */
+    val customTextsJson: String = "",
+    /**
+     * v3.4.2：用户手动指定的底栏图标。JSON 对象，key ∈ home/superuser/module/setting，
+     * value = 私有目录图片路径。优先级高于主题包自带的底栏图标。
+     */
+    val dockIconsJson: String = ""
 )
+
+/** 「界面文本自定义」可编辑的条目：key → 界面上的叫法。顺序即设置页顺序 */
+val THEME_TEXT_KEYS: List<Pair<String, String>> = listOf(
+    "app.title" to "顶栏标题",
+    "dock.home" to "底栏 · 小抄",
+    "dock.macro" to "底栏 · 连招",
+    "dock.theme" to "底栏 · 主题",
+    "dock.mine" to "底栏 · 我的"
+)
+
+/** 把上面那些 key 的默认值写死在一处，清空输入框就回落到这里 */
+fun defaultTextFor(key: String): String = when (key) {
+    "app.title" -> "云小抄"
+    "dock.home" -> "小抄"
+    "dock.macro" -> "连招"
+    "dock.theme" -> "主题"
+    "dock.mine" -> "我的"
+    else -> ""
+}
+
+/** JSON → 键值表。解析失败一律当空表，绝不因为一条脏数据让界面崩 */
+fun parseTextMap(json: String): Map<String, String> {
+    if (json.isBlank()) return emptyMap()
+    return runCatching {
+        val o = org.json.JSONObject(json)
+        val out = LinkedHashMap<String, String>()
+        o.keys().forEach { k ->
+            val v = o.optString(k).trim()
+            if (v.isNotEmpty()) out[k] = v
+        }
+        out
+    }.getOrDefault(emptyMap())
+}
+
+/** 键值表 → JSON。空表直接返回空串，保持「没设置过」的语义 */
+fun textMapToJson(map: Map<String, String>): String {
+    val clean = map.filterValues { it.isNotBlank() }
+    if (clean.isEmpty()) return ""
+    return runCatching { org.json.JSONObject(clean as Map<*, *>).toString() }.getOrDefault("")
+}
+
+/** 取一条自定义文案；没设置就返回 [fallback] */
+fun ThemeTuning.text(key: String, fallback: String): String {
+    // 旧版只有一个 customTitle 字段，迁移时当成 app.title 用，别让老用户的自定义丢掉
+    if (key == "app.title" && customTitle.isNotBlank() && customTextsJson.isBlank()) {
+        return customTitle
+    }
+    return parseTextMap(customTextsJson)[key] ?: fallback
+}
 
 /** 色彩风格选项（顺序即界面顺序） */
 val THEME_PALETTE_STYLES = listOf(
@@ -448,7 +508,9 @@ internal fun OverlayPrefs.readTuning(): ThemeTuning = ThemeTuning(
     bottomDensity = themeBottomDensity,
     showSliderValue = themeShowSliderValue,
     progressiveScrim = themeProgressiveScrim,
-    backgroundKey = themeBackgroundKey
+    backgroundKey = themeBackgroundKey,
+    customTextsJson = themeCustomTexts,
+    dockIconsJson = themeDockIcons
 )
 
 internal fun OverlayPrefs.writeTuning(t: ThemeTuning) {
@@ -471,6 +533,8 @@ internal fun OverlayPrefs.writeTuning(t: ThemeTuning) {
     themeShowSliderValue = t.showSliderValue
     themeProgressiveScrim = t.progressiveScrim
     themeBackgroundKey = t.backgroundKey
+    themeCustomTexts = t.customTextsJson
+    themeDockIcons = t.dockIconsJson
 }
 
 /**

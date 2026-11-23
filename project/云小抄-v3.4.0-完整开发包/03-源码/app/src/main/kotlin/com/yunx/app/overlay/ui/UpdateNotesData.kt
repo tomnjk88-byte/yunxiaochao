@@ -26,6 +26,20 @@ data class UpdateNote(
 /** 全部版本的更新说明，最新在最前。 */
 val UPDATE_NOTES: List<UpdateNote> = listOf(
     UpdateNote(
+            version = "v3.4.7",
+            date = "2026-11-23",
+            added = listOf(
+                "菜单键连点三下 → 弹出「导航方式」切换：两张剪裁好的示意图，" +
+                    "上面完整、下面按 Dock 让位，点哪张就切哪套。",
+            ),
+            improved = listOf(
+                "Dock 模式给底部胶囊让出 84dp：之前「一键下载」那排按钮正好被压住，点不到也看不见。",
+                "本机主题卡没有封面图时改画界面缩略图 —— 标题条 + 四张卡 + 底栏胶囊，" +
+                    "不再是纯渐变配一个圈。",
+            ),
+            fixed = emptyList(),
+        ),
+    UpdateNote(
             version = "v3.4.6",
             date = "2026-11-23",
             added = listOf(

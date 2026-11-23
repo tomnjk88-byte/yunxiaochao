@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -1245,15 +1246,68 @@ private fun CoverArt(pack: ThemePack, d0: Color, d1: Color, d2: Color, big: Bool
                     )
                 )
         )
-        // 细环：卡面里唯一一条「线」，让纯渐变不至于太空
-        Box(
+        // v3.4.7：没有封面图时，画一张「这个主题下的界面缩略图」——
+        // 标题条 + 四张卡 + 底部胶囊，比单纯一圈细环更像预览
+        Column(
             Modifier
-                .size(if (big) 150.dp else 104.dp)
-                .align(Alignment.TopStart)
-                .offset(x = if (big) 96.dp else 54.dp, y = if (big) 46.dp else 30.dp)
-                .clip(CircleShape)
-                .border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape)
-        )
+                .fillMaxWidth()
+                .fillMaxHeight(if (big) 0.64f else 0.60f)
+                .padding(
+                    start = if (big) 22.dp else 13.dp,
+                    end = if (big) 22.dp else 13.dp,
+                    top = if (big) 26.dp else 15.dp
+                )
+        ) {
+            Box(
+                Modifier
+                    .width(if (big) 96.dp else 58.dp)
+                    .height(if (big) 9.dp else 7.dp)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(Color.White.copy(alpha = 0.74f))
+            )
+            Spacer(Modifier.height(if (big) 5.dp else 4.dp))
+            Box(
+                Modifier
+                    .width(if (big) 58.dp else 36.dp)
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.White.copy(alpha = 0.34f))
+            )
+            Spacer(Modifier.height(if (big) 12.dp else 8.dp))
+            repeat(2) { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(if (big) 7.dp else 5.dp)) {
+                    repeat(2) {
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .height(if (big) 38.dp else 26.dp)
+                                .clip(RoundedCornerShape(if (big) 9.dp else 7.dp))
+                                .background(Color.White.copy(alpha = 0.13f))
+                                .border(
+                                    1.dp,
+                                    Color.White.copy(alpha = 0.16f),
+                                    RoundedCornerShape(if (big) 9.dp else 7.dp)
+                                )
+                        )
+                    }
+                }
+                if (row == 0) Spacer(Modifier.height(if (big) 7.dp else 5.dp))
+            }
+            Spacer(Modifier.weight(1f))
+            // 底栏胶囊：缩略图里也能看出「底部导航长什么样」
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(if (big) 14.dp else 10.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(Color.White.copy(alpha = 0.17f))
+                    .border(
+                        1.dp,
+                        Color.White.copy(alpha = 0.20f),
+                        RoundedCornerShape(999.dp)
+                    )
+            )
+        }
         // 斜光
         Box(
             Modifier

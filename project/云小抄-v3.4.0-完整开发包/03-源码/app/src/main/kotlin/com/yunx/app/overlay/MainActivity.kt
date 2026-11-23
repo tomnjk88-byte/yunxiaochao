@@ -183,6 +183,8 @@ import com.yunx.app.overlay.ui.ThemeWipeLayer
 import com.yunx.app.overlay.ui.ThemeWipeRequest
 import com.yunx.app.overlay.ui.ThemeStorePage
 import com.yunx.app.overlay.ui.DockHeader
+import com.yunx.app.overlay.ui.NavSwitchDialog
+import com.yunx.app.overlay.ui.rememberMenuTapHandler
 import com.yunx.app.overlay.ui.DockNav
 import com.yunx.app.overlay.ui.NavStyle
 import com.yunx.app.overlay.ui.tuningFromJson
@@ -596,6 +598,8 @@ private fun HomeScreen(
     var tab by remember { mutableIntStateOf(0) }
     // v1.9.11：换肤弹窗（顶栏调色盘按钮 / 「我的」页的「切换 ›」共用）
     var showStyle by remember { mutableStateOf(false) }
+    // v3.4.7：菜单键三击弹出的「导航方式」切换
+    var showNavSwitch by remember { mutableStateOf(false) }
     // v3.3.0：导航方式 —— 抽屉（老样子）/ 底部 Dock（商店那种）。
     // 跟风格一样走 StateFlow，主题设置里一改，这里立刻跟着变。
     val navStyle by GuideStyleStore.nav.collectAsState()
@@ -1516,6 +1520,7 @@ private fun HomeScreen(
                 subtitle = headerSubtitle,
                 dark = uiDark,
                 onOpenMenu = openMenu,
+                onOpenNavSwitch = { showNavSwitch = true },
                 onOpenStyle = { showStyle = true },
                 onToggleTheme = toggleTheme,
                 modifier = Modifier.statusBarsPadding()
@@ -1530,6 +1535,7 @@ private fun HomeScreen(
                 overlayGranted = overlayGranted,
                 onOpenDrawer = openMenu,
                 showDrawerButton = !dockNav,
+                onOpenNavSwitch = { showNavSwitch = true },
                 onOpenStyle = { showStyle = true },
                 dark = uiDark,
                 onToggleTheme = toggleTheme,
@@ -1543,6 +1549,9 @@ private fun HomeScreen(
         Box(
             Modifier
                 .weight(1f)
+                // v3.4.7：Dock 模式给底部胶囊让出位置 —— 之前「一键下载」那排按钮
+                // 正好被胶囊压住，点不到也看不见
+                .padding(bottom = if (dockNav) 84.dp else 0.dp)
                 .pointerInput(drawerOpen, dockNav) {
                     // v3.4.5：Dock 模式没有抽屉可开，横滑手势一并停用
                     if (drawerOpen || dockNav) return@pointerInput
@@ -1900,6 +1909,10 @@ private fun HomeScreen(
     if (showStyle) {
         StylePickerDialog(onDismiss = { showStyle = false })
     }
+    // v3.4.7：菜单键连点三下 → 导航方式切换（带两张示意图）
+    if (showNavSwitch) {
+        NavSwitchDialog(onDismiss = { showNavSwitch = false })
+    }
 }
 
 // ======================================================================
@@ -1918,6 +1931,8 @@ private fun GlassHeader(
     onOpenDrawer: () -> Unit,
     /** v3.4.5：Dock 模式下不再给抽屉入口 —— 两种导航方式互斥，选一种就只用一种 */
     showDrawerButton: Boolean = true,
+    /** v3.4.7：菜单键三击打开导航方式切换 */
+    onOpenNavSwitch: () -> Unit = {},
     onOpenStyle: () -> Unit,
     /** v3.1.0：当前是不是深色 —— 决定那颗按钮画太阳还是月亮 */
     dark: Boolean,
@@ -1936,17 +1951,18 @@ private fun GlassHeader(
         // v1.9.12：左侧菜单按钮 —— 抽屉的另一个入口（主入口是靠左边缘右滑）
         // v3.4.5：Dock 模式下整颗按钮不出现，两个导航体系彻底分开
         if (showDrawerButton) {
+            val onMenuTap = rememberMenuTapHandler(onOpenDrawer, onOpenNavSwitch)
             Box(
                 Modifier
                     .clip(RoundedCornerShape(13.dp))
                     .background(GlassColors.TextSub.copy(alpha = 0.10f))
                     .border(1.dp, GlassColors.Stroke, RoundedCornerShape(13.dp))
-                    .clickable(onClick = onOpenDrawer)
+                    .clickable(onClick = onMenuTap)
                     .padding(horizontal = 10.dp, vertical = 10.dp)
             ) {
                 Icon(
                     Icons.Rounded.Menu,
-                    contentDescription = "打开页面列表",
+                    contentDescription = "打开页面列表（连点三下切换导航方式）",
                     modifier = Modifier.size(19.dp),
                     tint = GlassColors.Text
                 )

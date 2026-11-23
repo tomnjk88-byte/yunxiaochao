@@ -52,6 +52,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,6 +70,42 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+/**
+ * v3.4.7：菜单键「三击」。
+ *
+ * 单击要等 380ms 再动作 —— 否则第一下就把抽屉打开了，后面两下全点在抽屉上，
+ * 永远凑不齐三次。三击打开导航方式切换，单击照旧开抽屉。
+ */
+@Composable
+fun rememberMenuTapHandler(
+    onSingleTap: () -> Unit,
+    onTripleTap: () -> Unit
+): () -> Unit {
+    val scope = rememberCoroutineScope()
+    var taps by remember { mutableIntStateOf(0) }
+    var pending by remember { mutableStateOf<Job?>(null) }
+    return remember(onSingleTap, onTripleTap) {
+        {
+            taps += 1
+            if (taps >= 3) {
+                taps = 0
+                pending?.cancel()
+                onTripleTap()
+            } else {
+                pending?.cancel()
+                pending = scope.launch {
+                    delay(380)
+                    taps = 0
+                    onSingleTap()
+                }
+            }
+        }
+    }
+}
 
 /**
  * 导航方式。存 key 不存序数 —— 以后再加第三套（比如侧边竖排）不会把老用户错位。
@@ -305,11 +346,14 @@ fun DockHeader(
     subtitle: String?,
     dark: Boolean,
     onOpenMenu: () -> Unit,
+    onOpenNavSwitch: () -> Unit,
     onOpenStyle: () -> Unit,
     onToggleTheme: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val t = LocalUiTokens.current
+    // v3.4.7：菜单键三击 = 切导航方式（单击照旧开页面列表）
+    val onMenuTap = rememberMenuTapHandler(onOpenMenu, onOpenNavSwitch)
     Column(
         modifier
             .fillMaxWidth()
@@ -321,8 +365,8 @@ fun DockHeader(
             // 二级页还得有个地方进 —— 与其再塞一格，不如留一颗菜单键。
             DockRoundButton(
                 icon = Icons.Rounded.Menu,
-                description = "打开页面列表",
-                onClick = onOpenMenu
+                description = "打开页面列表（连点三下切换导航方式）",
+                onClick = onMenuTap
             )
             Spacer(Modifier.weight(1f))
             DockRoundButton(

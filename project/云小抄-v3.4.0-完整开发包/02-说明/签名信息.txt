@@ -1,0 +1,26 @@
+云小抄 v3.4.0 安装包信息
+========================================
+
+包名        : com.yunx.app.guide
+版本名      : 3.4.0
+版本号      : 105（versionCode，只增不减，可直接覆盖安装旧版）
+minSdk      : 24（Android 7.0）
+targetSdk   : 34
+文件大小    : 8,097,607 字节
+MD5         : 07d846ffe6021b10a68092709ef78580
+
+签名证书
+----------------------------------------
+DN          : CN=GuideOverlay, OU=Personal, O=Personal, L=Local, ST=Local, C=CN
+SHA-256     : e47cd6b1 2301965e 61a65fa2 84b79d05 ff66a46e eaa45886 391979bc 7ecdcf04
+SHA-1       : 0e5e8567 cdf78607 c7cd4ba2 1825ee75 2ef0d0dd
+MD5         : f832351a 5a8df61d bc4c49fd 82d7487a
+
+与 v3.0.x / v3.1.0 / v3.2.0 / v3.3.0 同一套证书，可直接覆盖安装，不用卸载。
+
+校验方法
+----------------------------------------
+1. 电脑上：certutil -hashfile 云小抄-v3.4.0-release.apk MD5（Windows）
+           md5sum 云小抄-v3.4.0-release.apk（Linux / macOS）
+   对上面的 MD5 是否一致。
+2. 手机上：MT 管理器 → 打开 APK → 查看签名，SHA-256 应与上面一致。

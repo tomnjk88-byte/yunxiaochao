@@ -26,6 +26,19 @@ data class UpdateNote(
 /** 全部版本的更新说明，最新在最前。 */
 val UPDATE_NOTES: List<UpdateNote> = listOf(
     UpdateNote(
+            version = "v3.4.9",
+            date = "2026-11-24",
+            added = listOf(
+                "页面列表七项图标都能单独换图：小抄 / 连招 / 准星 / 解析下载 / 权限 / 主题商店 / 我的，" +
+                    "每项都能导入图片、也能一键清除回默认（主题设置 → 底栏与导航）。",
+                "界面文本自定义扩到 12 条：顶栏标题 + 底栏四个 + 页面列表七项，全部可以改成自己的字。",
+            ),
+            improved = listOf(
+                "文本自定义弹窗改成可滚动 —— 条目从 5 条变 12 条，以前那种固定高度会撑出屏幕。",
+            ),
+            fixed = emptyList(),
+        ),
+    UpdateNote(
             version = "v3.4.8",
             date = "2026-11-24",
             added = emptyList(),

@@ -100,10 +100,12 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -111,6 +113,10 @@ import kotlin.math.roundToInt
 data class DrawerItem(
     val label: String,
     val icon: ImageVector,
+    /**
+     * v3.4.9：稳定标识。自定义图标 / 文字按它存，增删条目不会串位。
+     */
+    val key: String = "",
     /** 分组名；相邻项分组不同时插一个小标题。只影响显示，不影响 index */
     val section: String = "",
     /**
@@ -392,6 +398,17 @@ private fun DrawerPanel(
     val t = LocalUiTokens.current
     val context = LocalContext.current
     val shape = panelShape(side)
+    // v3.4.9：抽屉每一项的图标与文字都能单独换
+    val tuning = LocalThemeTuning.current
+    val customTexts = remember(tuning.customTextsJson) {
+        parseTextMap(tuning.customTextsJson)
+    }
+    val drawerPrefs = remember(context) {
+        com.yunx.app.overlay.data.OverlayPrefs(context)
+    }
+    val drawerIcons = remember(drawerPrefs.drawerIcons) {
+        parseTextMap(drawerPrefs.drawerIcons)
+    }
     // 默认展开「小抄」那组（第 0 项）；其余组点开才展
     var expandedIndex by remember { mutableIntStateOf(0) }
 
@@ -560,15 +577,28 @@ private fun DrawerPanel(
                             .padding(horizontal = 12.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            item.icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(19.dp),
-                            tint = if (active) t.accent else t.textSub
-                        )
+                        val itemLabel = customTexts["drawer." + item.key] ?: item.label
+                        val artPath = if (item.key.isNotBlank()) drawerIcons[item.key] else null
+                        if (artPath != null && java.io.File(artPath).isFile) {
+                            AsyncImage(
+                                model = java.io.File(artPath),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(19.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                            )
+                        } else {
+                            Icon(
+                                item.icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(19.dp),
+                                tint = if (active) t.accent else t.textSub
+                            )
+                        }
                         Spacer(Modifier.width(12.dp))
                         Text(
-                            item.label,
+                            itemLabel,
                             fontSize = 14.sp,
                             fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
                             color = if (active) t.text else t.textSub,

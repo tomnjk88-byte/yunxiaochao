@@ -503,6 +503,16 @@ class OverlayPrefs(context: Context) {
         }
 
     /**
+     * v3.4.9：页面列表（抽屉）每项的图标。JSON：key → 私有目录图片路径。
+     * key 与抽屉条目一一对应（home / macro / aim / parse / perm / store / mine）。
+     */
+    var drawerIcons: String
+        get() = prefs.getString(KEY_DRAWER_ICONS, "") ?: ""
+        set(value) {
+            prefs.edit().putString(KEY_DRAWER_ICONS, value).apply()
+        }
+
+    /**
      * v3.4.6：应用显示名称。留空 = 「云小抄」。
      *
      * 只改应用内看得到的名字（抽屉头部、关于页、桌面快捷方式）。
@@ -992,6 +1002,7 @@ class OverlayPrefs(context: Context) {
         private const val KEY_APP_ICON = "app_icon_key"
         private const val KEY_CUSTOM_TEXTS = "theme_custom_texts"
         private const val KEY_DOCK_ICONS = "theme_dock_icons"
+        private const val KEY_DRAWER_ICONS = "drawer_custom_icons"
         private const val KEY_APP_NAME = "app_display_name"
         private const val KEY_EXPANDED_W = "expanded_w"
         private const val KEY_EXPANDED_H = "expanded_h"

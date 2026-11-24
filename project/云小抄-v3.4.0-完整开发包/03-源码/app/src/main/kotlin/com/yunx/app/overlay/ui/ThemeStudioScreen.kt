@@ -37,12 +37,21 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.CenterFocusStrong
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Edit
@@ -1207,7 +1216,11 @@ private fun IconTextSection(
                 Text("界面文本自定义喵~", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             },
             text = {
-                Column {
+                Column(
+                    Modifier
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
                     THEME_TEXT_KEYS.forEach { (key, label) ->
                         OutlinedTextField(
                             value = drafts[key].orEmpty(),
@@ -1536,6 +1549,92 @@ private fun BottomBarSection(
             if (index < 3) GlassDivider()
         }
     }
+    // ------------------------------------------------------------------
+    // v3.4.9：页面列表（抽屉）七项图标 —— 跟上面底栏那四行同一套做法。
+    // 导入主题后这几项如果还是系统线框图标，就是从这里换成自己的图。
+    // ------------------------------------------------------------------
+    var drawerIcons by remember { mutableStateOf(parseTextMap(prefs.drawerIcons)) }
+    var pendingDrawer by remember { mutableStateOf<String?>(null) }
+
+    fun clearDrawerIcon(key: String) {
+        val map = parseTextMap(prefs.drawerIcons).toMutableMap()
+        map.remove(key)?.let { old -> runCatching { File(old).delete() } }
+        prefs.drawerIcons = textMapToJson(map)
+        drawerIcons = map
+    }
+
+    val drawerPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        val key = pendingDrawer
+        pendingDrawer = null
+        if (uri == null || key == null) return@rememberLauncherForActivityResult
+        runCatching {
+            val dest = File(
+                context.filesDir,
+                "drawer_icon_${key}_${System.currentTimeMillis()}.img"
+            )
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                dest.outputStream().use { out -> input.copyTo(out) }
+            } ?: error("无法读取所选图片")
+            val map = parseTextMap(prefs.drawerIcons).toMutableMap()
+            map[key]?.let { old -> runCatching { File(old).delete() } }
+            map[key] = dest.absolutePath
+            prefs.drawerIcons = textMapToJson(map)
+            drawerIcons = map
+        }.onFailure {
+            Toast.makeText(context, "设置图标失败：${it.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    GlassSectionTitle("页面列表图标")
+    GlassCard {
+        listOf(
+            "home" to ("小抄" to Icons.Rounded.Description),
+            "macro" to ("连招" to Icons.Rounded.Bolt),
+            "aim" to ("准星" to Icons.Rounded.CenterFocusStrong),
+            "parse" to ("解析下载" to Icons.Rounded.Link),
+            "perm" to ("权限" to Icons.Rounded.Shield),
+            "store" to ("主题商店" to Icons.Rounded.Style),
+            "mine" to ("我的" to Icons.Rounded.Person)
+        ).forEachIndexed { index, (key, pair) ->
+            val (label, icon) = pair
+            val has = drawerIcons.containsKey(key)
+            GlassRow(
+                title = label,
+                subtitle = if (has) "正在使用自定义图片 · 点击替换" else "默认图标 · 点击选一张图",
+                icon = icon,
+                onClick = {
+                    pendingDrawer = key
+                    drawerPicker.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                }
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (has) {
+                        Text(
+                            "清除",
+                            fontSize = 10.sp,
+                            color = GlassColors.TextSub,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { clearDrawerIcon(key) }
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    Text("更换 ›", fontSize = 10.sp, color = GlassColors.Accent)
+                }
+            }
+            if (index < 6) GlassDivider()
+        }
+    }
+    GlassHint(
+        "这七项是抽屉 / 页面列表里的图标，和底栏那四个互不影响；" +
+            "文字在「图标文字 → 界面文本自定义」里改。"
+    )
+
     GlassHint(
         "这里选的图只换底栏那一个格子；想让四个一起换，用「主题包」里带图的那套。"
     )

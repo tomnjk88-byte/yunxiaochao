@@ -498,6 +498,7 @@ private val DRAWER_ITEMS = listOf(
     DrawerItem(
         label = "小抄",
         icon = Icons.Rounded.Description,
+        key = "home",
         section = "内容",
         target = 0,
         children = listOf(
@@ -510,7 +511,8 @@ private val DRAWER_ITEMS = listOf(
     // v2.9.1：其它页也按「主按钮 + 次按钮」分好 —— 一页只干一件事，
     // 跟小抄那四页同一套结构、同一套选中箭头。
     DrawerItem(
-        "连招", Icons.Rounded.Bolt, "内容",
+        "连招", Icons.Rounded.Bolt, section = "内容",
+        key = "macro",
         target = 1,
         children = listOf(
             DrawerChild("连招开关", "switch"),
@@ -520,7 +522,8 @@ private val DRAWER_ITEMS = listOf(
         )
     ),
     DrawerItem(
-        "准星", Icons.Rounded.CenterFocusStrong, "内容",
+        "准星", Icons.Rounded.CenterFocusStrong, section = "内容",
+        key = "aim",
         target = 2,
         children = listOf(
             DrawerChild("我的准星", "list"),
@@ -530,7 +533,8 @@ private val DRAWER_ITEMS = listOf(
     // v3.0.2：解析和下载并成一页 —— 粘链接、选目录、看进度本就是一串动作，
     // 拆成两个入口只会让人在「解析完去哪看」上多问一次。
     DrawerItem(
-        "解析下载", Icons.Rounded.Link, "内容",
+        "解析下载", Icons.Rounded.Link, section = "内容",
+        key = "parse",
         target = 3,
         jumpOnTap = true,
         children = listOf(
@@ -539,7 +543,8 @@ private val DRAWER_ITEMS = listOf(
         )
     ),
     DrawerItem(
-        "权限", Icons.Rounded.Shield, "设置",
+        "权限", Icons.Rounded.Shield, section = "设置",
+        key = "perm",
         target = 5,
         children = listOf(
             DrawerChild("权限", "perm"),
@@ -549,9 +554,10 @@ private val DRAWER_ITEMS = listOf(
     // v3.4.6：「协议」「使用说明」「关于」三处入口合并成一个 ——
     // 抽屉里只留「我的 → 关于与使用说明」，避免底部再挤两行、还跟 Dock 打架。
     // v3.3.0：主题商店。Dock 模式里它是第三格；抽屉模式从这里进
-    DrawerItem("主题商店", Icons.Rounded.Style, "设置", target = 8),
+    DrawerItem("主题商店", Icons.Rounded.Style, section = "设置", key = "store", target = 8),
     DrawerItem(
-        "我的", Icons.Rounded.Person, "设置",
+        "我的", Icons.Rounded.Person, section = "设置",
+        key = "mine",
         target = 7,
         children = listOf(
             DrawerChild("账号与同步", "account"),

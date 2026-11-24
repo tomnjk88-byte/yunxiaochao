@@ -359,7 +359,14 @@ val THEME_TEXT_KEYS: List<Pair<String, String>> = listOf(
     "dock.home" to "底栏 · 小抄",
     "dock.macro" to "底栏 · 连招",
     "dock.theme" to "底栏 · 主题",
-    "dock.mine" to "底栏 · 我的"
+    "dock.mine" to "底栏 · 我的",
+    "drawer.home" to "列表 · 小抄",
+    "drawer.macro" to "列表 · 连招",
+    "drawer.aim" to "列表 · 准星",
+    "drawer.parse" to "列表 · 解析下载",
+    "drawer.perm" to "列表 · 权限",
+    "drawer.store" to "列表 · 主题商店",
+    "drawer.mine" to "列表 · 我的"
 )
 
 /** 把上面那些 key 的默认值写死在一处，清空输入框就回落到这里 */
@@ -369,6 +376,13 @@ fun defaultTextFor(key: String): String = when (key) {
     "dock.macro" -> "连招"
     "dock.theme" -> "主题"
     "dock.mine" -> "我的"
+    "drawer.home" -> "小抄"
+    "drawer.macro" -> "连招"
+    "drawer.aim" -> "准星"
+    "drawer.parse" -> "解析下载"
+    "drawer.perm" -> "权限"
+    "drawer.store" -> "主题商店"
+    "drawer.mine" -> "我的"
     else -> ""
 }
 

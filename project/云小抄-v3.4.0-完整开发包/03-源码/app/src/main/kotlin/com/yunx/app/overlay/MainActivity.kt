@@ -1874,12 +1874,9 @@ private fun HomeScreen(
         // v3.3.0：底部 Dock。浮在内容之上、日夜遮罩之下 ——
         // 放在遮罩前面，切日夜的时候胶囊也会被圆形扫过去，观感是一整块换的。
         if (dockNav) {
-            val installedPacks = remember(themeTick) {
-                runCatching { ThemePacks.installed(context).size }.getOrDefault(0)
-            }
-            val dockBadges = buildMap {
-                if (installedPacks > 0) put(8, installedPacks)
-            }
+            // v3.4.8：主题格不再挂「本机包数量」角标 —— 那颗红点盖在自定义图标上，
+            // 看着像脏点，而且数量对用户没有意义
+            val dockBadges: Map<Int, Int> = emptyMap()
             val dockDots = buildSet {
                 if (running) add(0)
                 if (macroWindowOn) add(1)

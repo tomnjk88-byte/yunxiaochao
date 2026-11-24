@@ -302,6 +302,27 @@ object ThemePacks {
     fun cover(pack: ThemePack): File? =
         pack.coverPath?.let { p -> File(p).takeIf { it.isFile && it.length() > 0 } }
 
+    /**
+     * v3.4.8：给已经导入的包补一张封面。
+     *
+     * `.sukisu` 包里根本没有预览图 —— 商店列表里那张图是作者单独上传到服务器的，
+     * 所以下载主题时顺手把它存下来，卡片才有真预览，而不是一片渐变。
+     */
+    fun attachCover(context: Context, id: String, bytes: ByteArray): String? {
+        val pack = installed(context).firstOrNull { it.id == id } ?: return null
+        val file = File(coversDir(context), "$id.webp")
+        val ok = runCatching {
+            file.outputStream().use { it.write(bytes) }
+        }.isSuccess
+        if (!ok) return null
+        val old = pack.coverPath
+        if (old != null && old != file.absolutePath) {
+            runCatching { File(old).takeIf { it.exists() }?.delete() }
+        }
+        save(context, pack.copy(coverPath = file.absolutePath))
+        return file.absolutePath
+    }
+
     // ------------------------------------------------------------------
     // 导出 .sukisu（v3.4.2）
     // ------------------------------------------------------------------

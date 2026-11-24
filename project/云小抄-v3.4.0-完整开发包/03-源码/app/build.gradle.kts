@@ -64,8 +64,8 @@ android {
         //     改了对不上手里的安装包；从 3.0.0 起一律按新规则走。
         //   · versionCode 每版 +1，与大小更新无关（安装判据，只增不减）
         // 判定标准与已发版本校准表见 README 第四十三节。
-        versionCode = 112
-        versionName = "3.4.7"
+        versionCode = 113
+        versionName = "3.4.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

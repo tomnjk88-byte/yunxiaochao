@@ -26,6 +26,18 @@ data class UpdateNote(
 /** 全部版本的更新说明，最新在最前。 */
 val UPDATE_NOTES: List<UpdateNote> = listOf(
     UpdateNote(
+            version = "v3.4.8",
+            date = "2026-11-24",
+            added = emptyList(),
+            improved = listOf(
+                "主题卡片补上真预览图：.sukisu 包里本来就没有截图，商店那张图是作者单独上传的，" +
+                    "现在下载主题时顺手存成封面；已经导入的老包会按名字自动去在线列表配一张。",
+            ),
+            fixed = listOf(
+                "去掉底栏「主题」图标上那颗数字角标 —— 它盖在自定义图标上，看着就是个脏点。",
+            ),
+        ),
+    UpdateNote(
             version = "v3.4.7",
             date = "2026-11-23",
             added = listOf(

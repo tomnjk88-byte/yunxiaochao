@@ -192,6 +192,32 @@ fun ThemeStorePage(
         remoteCatalog?.baseUrl?.let { ThemeStoreRemote.cachedToken(context, it) }
     }
 
+    // v3.4.8：老包补封面。之前从商店 / 文件导进来的包都没存预览图，
+    // 目录一到就按名字去在线列表里配一张，配上了就落盘，之后不再重复下。
+    LaunchedEffect(remoteCatalog) {
+        val catalog = remoteCatalog ?: return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            val bare = ThemePacks.installed(context).filter {
+                it.coverPath == null && it.tags.contains("SukiSU")
+            }
+            var fixed = 0
+            for (pack in bare) {
+                val match = catalog.themes.firstOrNull { it.name == pack.name }
+                    ?: catalog.themes.firstOrNull {
+                        it.name.contains(pack.name, true) ||
+                            pack.name.contains(it.name, true)
+                    } ?: continue
+                val bytes = runCatching {
+                    ThemeStoreRemote.downloadPreview(context, match)
+                }.getOrNull() ?: continue
+                if (ThemePacks.attachCover(context, pack.id, bytes) != null) fixed++
+            }
+            if (fixed > 0) {
+                withContext(Dispatchers.Main) { localTick++ }
+            }
+        }
+    }
+
     // 在线列表的搜索过滤（标签筛选由上面的 tag 统一管）
     val remoteShown = remember(remoteThemes, query, tag) {
         val q = query.trim()
@@ -212,7 +238,18 @@ fun ThemeStorePage(
             val result = withContext(Dispatchers.IO) {
                 runCatching {
                     val bytes = ThemeStoreRemote.download(context, theme)
-                    ThemePacks.importBytes(context, bytes, "${theme.name}.sukisu")
+                    val imported = ThemePacks.importBytes(context, bytes, "${theme.name}.sukisu")
+                    // v3.4.8：预览图不在 .sukisu 里，单独下一张存成封面，
+                    // 卡片才有真截图。失败了就退回按主题配色画的缩略图。
+                    imported.pack?.let { pack ->
+                        val preview = runCatching {
+                            ThemeStoreRemote.downloadPreview(context, theme)
+                        }.getOrNull()
+                        if (preview != null && preview.isNotEmpty()) {
+                            ThemePacks.attachCover(context, pack.id, preview)
+                        }
+                    }
+                    imported
                 }
             }
             downloadingId = null

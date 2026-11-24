@@ -77,6 +77,7 @@ object ThemeStoreRemote {
     private const val PREFS = "yunx_theme_store"
     private const val MAX_CATALOG = 8L * 1024 * 1024
     private const val MAX_PACKAGE = 64L * 1024 * 1024
+    private const val MAX_PREVIEW = 8L * 1024 * 1024
 
     private val client: OkHttpClient by lazy {
         OkHttpClient.Builder()
@@ -238,6 +239,33 @@ object ThemeStoreRemote {
             }
         }
         throw last ?: IOException("下载失败")
+    }
+
+    /**
+     * v3.4.8：下载商店封面（作者单独上传的预览图，不在 .sukisu 里）。
+     * 拿不到就返回 null —— 卡片退回按主题配色画的缩略图，不报错。
+     */
+    fun downloadPreview(context: Context, theme: RemoteTheme): ByteArray? {
+        if (theme.previewPath.isBlank()) return null
+        for (b in BASE_URLS) {
+            val bytes = runCatching {
+                val token = ensureToken(context, b)
+                val url = assetUrl(b, theme.previewPath) ?: return null
+                val request = Request.Builder()
+                    .url(url)
+                    .header(TOKEN_HEADER, token)
+                    .get()
+                    .build()
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@use null
+                    val body = response.body ?: return@use null
+                    if (body.contentLength() > MAX_PREVIEW) return@use null
+                    body.bytes()
+                }
+            }.getOrNull()
+            if (bytes != null && bytes.isNotEmpty()) return bytes
+        }
+        return null
     }
 
     private fun getPackage(base: String, token: String, path: String): ByteArray? {

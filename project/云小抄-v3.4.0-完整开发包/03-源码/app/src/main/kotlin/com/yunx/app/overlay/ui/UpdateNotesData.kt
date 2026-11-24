@@ -26,6 +26,19 @@ data class UpdateNote(
 /** 全部版本的更新说明，最新在最前。 */
 val UPDATE_NOTES: List<UpdateNote> = listOf(
     UpdateNote(
+            version = "v3.4.10",
+            date = "2026-11-24",
+            added = emptyList(),
+            improved = listOf(
+                "帧率悬浮窗开关加单飞锁：一轮点完 0.45 秒才接下一轮，连点不会再把窗口拆了重建。",
+                "服务端对同一条开关指令去重 —— 连续下发「开 / 开 / 开」只执行第一次。",
+            ),
+            fixed = listOf(
+                "连点帧率悬浮窗开关后界面卡住、开关状态与实际窗口对不上；" +
+                    "以及开了又弹「请先授予显示在其他应用上层」的问题。",
+            ),
+        ),
+    UpdateNote(
             version = "v3.4.9",
             date = "2026-11-24",
             added = listOf(

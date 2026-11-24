@@ -176,6 +176,24 @@ fun FpsWindowSection() {
     var showMs by remember { mutableStateOf(prefs.fpsShowMs) }
     var textColor by remember { mutableStateOf(prefs.fpsTextColor) }
 
+    // v3.4.10：连点开关会把服务的启停指令叠在一起 —— 上一扇窗还没挂好又开始拆，
+    // 界面就卡住不动。这里加一把单飞锁：一轮点完 0.45 秒才接下一轮。
+    val scope = rememberCoroutineScope()
+    var switching by remember { mutableStateOf(false) }
+
+    fun toggleFps(next: Boolean) {
+        if (switching || next == shown) return
+        // 权限判断交给服务自己（部分 ROM 的 canDrawOverlays 与实际授权不一致，
+        // 这里提前拦会把本来能显示的窗挡掉）
+        switching = true
+        shown = next
+        FloatingService.showFps(context, next)
+        scope.launch {
+            kotlinx.coroutines.delay(450)
+            switching = false
+        }
+    }
+
     fun applyFps() {
         if (shown) FloatingService.applyFps(context)
     }
@@ -187,17 +205,11 @@ fun FpsWindowSection() {
             title = "显示帧率悬浮窗",
             subtitle = "显示当前屏幕的合成帧率，可拖动到任意位置；透明/不透明都能自定义",
             icon = Icons.Rounded.Speed,
-            onClick = {
-                shown = !shown
-                FloatingService.showFps(context, shown)
-            }
+            onClick = { toggleFps(!shown) }
         ) {
             GlassSwitch(
                 checked = shown,
-                onCheckedChange = {
-                    shown = it
-                    FloatingService.showFps(context, it)
-                }
+                onCheckedChange = { toggleFps(it) }
             )
         }
         GlassDivider()

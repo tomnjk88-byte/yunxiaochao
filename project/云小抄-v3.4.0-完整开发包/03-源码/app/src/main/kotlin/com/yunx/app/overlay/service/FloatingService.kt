@@ -310,6 +310,8 @@ class FloatingService : Service() {
     override fun onCreate() {
         super.onCreate()
         isRunning = true
+        // v3.4.10：新服务实例的窗口状态是空的，上一轮的指令记录作废
+        lastFpsRequest = null
         // 隐藏状态只在本次 Service 生命周期内有效，重启一律恢复显示，
         // 免得重启手机后用户以为悬浮窗丢了
         windowsHidden = false
@@ -654,6 +656,7 @@ class FloatingService : Service() {
     /** v2.5.6 帧率窗开关：独立一层，与小抄 / 连招 / 准星各存各的开关 */
     private fun setFpsWindowShown(show: Boolean) {
         prefs.fpsShown = show
+        lastFpsRequest = show
         if (show) revealWindows()
         if (show) {
             fpsOverlay.show()
@@ -2659,12 +2662,25 @@ class FloatingService : Service() {
         }
 
         /**
+         * v3.4.10：帧率窗最后一条指令。连点开关时，上一扇窗还没挂好就再来一条，
+         * 窗口被反复拆建，界面上就是「卡住不响应」。
+         */
+        @Volatile
+        private var lastFpsRequest: Boolean? = null
+
+        /**
          * v2.5.6 帧率悬浮窗开关：先写偏好再发 action。
          * 服务没跑还要「关」，只把偏好落回 false，没必要冷启动一个空服务。
          */
         fun showFps(context: Context, show: Boolean) {
             OverlayPrefs(context).fpsShown = show
-            if (!show && !isRunning) return
+            if (!show && !isRunning) {
+                lastFpsRequest = null
+                return
+            }
+            // 同一状态重复下发直接忽略
+            if (isRunning && lastFpsRequest == show) return
+            lastFpsRequest = show
             dispatch(
                 context,
                 Intent(context, FloatingService::class.java)

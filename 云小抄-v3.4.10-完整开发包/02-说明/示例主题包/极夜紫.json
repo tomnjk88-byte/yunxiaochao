@@ -1,0 +1,41 @@
+{
+  "schema": "yunx.theme",
+  "v": 1,
+  "id": "demo.polar",
+  "name": "极夜紫",
+  "author": "示例包",
+  "version": "1.2.0",
+  "note": "紫调玻璃 · 大圆角 · 上下边缘渐隐",
+  "tags": [
+    "深色",
+    "玻璃"
+  ],
+  "dots": [
+    "#7C3AED",
+    "#C9A8FF",
+    "#12081F"
+  ],
+  "downloads": 0,
+  "likes": 0,
+  "date": "2026/11/23",
+  "tuning": {
+    "v": 1,
+    "accentKey": "violet",
+    "paletteStyle": "tonal",
+    "colorSpec": "2025",
+    "customAccent": 0,
+    "cardAlpha": 0.8,
+    "blurScale": 1.26,
+    "scrimBias": -0.1,
+    "fontScale": 1.04,
+    "cardRadius": 1.3,
+    "borderScale": 1.12,
+    "shadowScale": 1.16,
+    "dividerScale": 0.9,
+    "iconShape": "circle",
+    "hideSubtitle": false,
+    "bottomDensity": "normal",
+    "showSliderValue": false,
+    "progressiveScrim": true
+  }
+}

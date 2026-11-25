@@ -1,0 +1,38 @@
+云小抄 v3.4.10 安装包信息
+========================================
+
+包名        : com.yunx.app.guide
+版本名      : 3.4.10
+版本号      : 115（versionCode，只增不减，可直接覆盖安装旧版）
+minSdk      : 24（Android 7.0）
+targetSdk   : 34
+编译 SDK    : 36（build-tools 36.0.0）
+文件大小    : 8,147,801 字节
+MD5         : eaa6b736a48e14e4461fce57ede1c1f4
+SHA-256     : a153062661177d9c8772ea6fc9c06097660350483d94a853376aede811451360
+
+签名证书
+----------------------------------------
+DN          : CN=GuideOverlay, OU=Personal, O=Personal, L=Local, ST=Local, C=CN
+SHA-256     : e47cd6b1 2301965e 61a65fa2 84b79d05 ff66a46e eaa45886 391979bc 7ecdcf04
+SHA-1       : 0e5e8567 cdf78607 c7cd4ba2 1825ee75 2ef0d0dd
+MD5         : f832351a 5a8df61d bc4c49fd 82d7487a
+
+与 v3.0.x ~ v3.4.9 同一套证书，可直接覆盖安装，不用卸载。
+
+权限
+----------------------------------------
+共 17 项，自 v3.4.0 起未做任何改动。
+加权限会导致覆盖安装后的行为变化，后续维护请勿修改 AndroidManifest 的 uses-permission。
+
+校验方法
+----------------------------------------
+1. 电脑上：certutil -hashfile 云小抄-v3.4.10-release.apk SHA256（Windows）
+           sha256sum 云小抄-v3.4.10-release.apk（Linux / macOS）
+2. 手机上：MT 管理器 → 打开 APK → 查看签名，SHA-256 应与上面一致。
+
+构建信息
+----------------------------------------
+签名证书文件：03-源码/guide.keystore（alias: guide，口令: guide123456）
+构建命令      ：./gradlew :app:assembleRelease
+签名注入      ：YUNX_KEYSTORE_FILE / YUNX_KEYSTORE_PASSWORD / YUNX_KEY_ALIAS / YUNX_KEY_PASSWORD

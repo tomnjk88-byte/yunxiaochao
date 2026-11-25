@@ -1,0 +1,32 @@
+云小抄 v3.0.2 - 快速开始 / Quick start
+==========================================
+
+如果你解压后中文文件名变成乱码了，用 build.bat 代替 一键打包.bat，功能完全一样。
+
+第 1 步  装 JDK 17
+        https://adoptium.net/temurin/releases/?version=17
+        选 Windows x64 JDK 17 -> .msi -> 安装时务必勾选 "Set JAVA_HOME variable"
+
+第 2 步  装 Android Studio
+        https://developer.android.com/studio
+        首次启动选 Standard。进入主界面后打开 SDK Manager：
+          - SDK Platforms 勾 Android 16.0 (API 36)
+          - SDK Tools  勾 Show Package Details -> Build-Tools 36.0.0
+
+第 3 步  把本文件夹解压到短英文路径，例如 D:\dev\yunx-guide
+        （路径不要有中文和空格，否则会报 filename too long）
+
+第 4 步  双击 build.bat（或 一键打包.bat）
+        脚本会自己检查环境、写 local.properties、编译，
+        最后在同目录生成 yunxiao-v3.0.2-debug.apk
+
+首次编译要下 Gradle 约 130MB + 依赖数百MB，10~20 分钟，别关窗口。
+
+如果编译失败，把最后 30 行报错（e: 开头 和 FAILURE: 之后那段）发给我。
+
+其他路线
+--------
+不装环境走云端编译：看 一键云编译.md（或 1-click-cloud-build.md）
+Linux / macOS 命令行：bash 本地一键打包.sh
+详细步骤 + 报错对照表：WINDOWS-BUILD.md
+代码改了什么：_交付文档/v3.0.2_改动说明.md

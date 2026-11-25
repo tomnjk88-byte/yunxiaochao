@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  云小抄自动连招的无障碍服务配置。
+  canPerformGestures=true 才能调用 dispatchGesture；不订阅内容、不检索窗口内容。
+  canRequestFilterKeyEvents=true 是 v1.9.19 补的：没有这一行，代码里动态 or 上去的
+  FLAG_REQUEST_FILTER_KEY_EVENTS 会被系统直接忽略，onKeyEvent 永远收不到音量键，
+  「双击音量键隐藏悬浮窗」就成了摆设。
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/macro_accessibility_description"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:notificationTimeout="100"
+    android:canPerformGestures="true"
+    android:canRetrieveWindowContent="false"
+    android:canRequestFilterKeyEvents="true" />

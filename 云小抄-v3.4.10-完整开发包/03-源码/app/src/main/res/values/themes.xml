@@ -1,0 +1,60 @@
+<!--
+    YunX (云析) - A network drive share-link parser and high-speed downloader for Android.
+    Copyright (C) 2026 CYQawa
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.ComposeEmptyActivity" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+
+    <!-- 显式浅色窗口主题：应用内「始终浅色」时 MainActivity 动态 setTheme 使用（不受系统深色影响） -->
+    <style name="Theme.ComposeEmptyActivity.Light" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+
+    <!-- 显式深色窗口主题：应用内「始终深色」时 MainActivity 动态 setTheme 使用（系统为浅色时也能深色开屏） -->
+    <style name="Theme.ComposeEmptyActivity.Dark" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/background_dark</item>
+    </style>
+
+    <!-- 云小抄主页专用：沉浸式深色玻璃。
+         windowBackground 直接用深色，配合 Activity 里的 setDecorFitsSystemWindows(false)
+         + 透明状态栏，让背景一直铺到屏幕顶端 —— 不再有「状态栏那一圈黑边」。 -->
+    <style name="Theme.YunXiaoChao" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+
+    <!-- v1.8.4：连招按钮「换图片」的中继 Activity。全透明、无界面、无动画，
+         用户只会看到系统照片选择器，选完立刻 finish，不留在最近任务里。 -->
+    <style name="Theme.TransparentPicker" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>
